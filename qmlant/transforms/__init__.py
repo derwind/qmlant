@@ -1,1 +1,1 @@
-from .transforms import ToTensor, MapLabel
+from .transforms import MapLabel, ToTensor

@@ -2,5 +2,17 @@
 line-length = 100
 target-version = ['py38', 'py39', 'py310', 'py311']
 
+[tool.pylint.messages_control]
+disable = [
+  "C0103", # invalid-name
+  "C0114", # missing-module-docstring
+  "C0115", # missing-class-docstring
+  "C0116", # missing-function-docstring
+  "C0414", # useless-import-alias
+  "W0212", # protected-access
+  "R0913", # too-many-arguments
+  "R0914", # too-many-locals
+]
+
 [tool.pylint.format]
 max-line-length = 200

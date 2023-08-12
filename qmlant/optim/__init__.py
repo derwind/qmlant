@@ -1,8 +1,1 @@
-from .optimizers import (
-    Optimizer,
-    SGD,
-    MomentumSGD,
-    AdaGrad,
-    AdaDelta,
-    Adam
-)
+from .optimizers import SGD, AdaDelta, AdaGrad, Adam, MomentumSGD, Optimizer

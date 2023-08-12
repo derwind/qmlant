@@ -1,13 +1,15 @@
 from __future__ import annotations
-from typing import Callable, Any
+
 from collections.abc import Sequence
+from typing import Any, Callable
+
 import numpy as np
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
-import torch.utils.data as data
+from torch.utils import data as torch_data
 
 
-class BaseDataset(data.Dataset):
+class BaseDataset(torch_data.Dataset):
     def __init__(
         self,
         transform: Callable | None = None,
@@ -44,8 +46,11 @@ class Iris(BaseDataset):
         self.subclass_targets = subclass_targets
         self.data, self.targets = self._load_data()
 
-    def _load_data(self):
+    def _load_data(self) -> tuple[np.ndarray, np.ndarray]:
         iris = datasets.load_iris()
+        if isinstance(iris, tuple):
+            iris = iris[0]
+
         if self.subclass_targets:
             indices = np.zeros_like(iris.target, dtype=bool)
             for t in self.subclass_targets:
@@ -71,8 +76,8 @@ class Iris(BaseDataset):
 
         if self.train:
             return X_train, y_train
-        else:
-            return X_test, y_test
+
+        return X_test, y_test
 
     def __getitem__(self, index: int) -> tuple[Any, Any]:
         data, target = self.data[index], int(self.targets[index])

@@ -1,4 +1,5 @@
 qiskit
+quimb
 cuquantum-python
 networkx
 scikit-learn

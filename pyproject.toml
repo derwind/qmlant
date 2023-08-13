@@ -10,8 +10,10 @@ disable = [
   "C0116", # missing-function-docstring
   "C0414", # useless-import-alias
   "W0212", # protected-access
+  "R0912", # too-many-branches
   "R0913", # too-many-arguments
   "R0914", # too-many-locals
+  "R0915", # too-many-statements
 ]
 
 [tool.pylint.format]

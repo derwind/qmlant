@@ -1,0 +1,6 @@
+qiskit
+cuquantum-python
+networkx
+scikit-learn
+torch
+numpy

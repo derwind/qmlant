@@ -71,12 +71,16 @@ def circuit_to_quimb_tn(qc: QuantumCircuit) -> qtn.Circuit | None:
                 circuit.apply_gate("U1", -math.pi / 4, *op_qubits)
             elif gate == lib.standard_gates.XGate:
                 circuit.apply_gate("X", *op_qubits)
-            elif gate == lib.standard_gates.CXGate:
-                circuit.apply_gate("CX", *op_qubits)
             elif gate == lib.standard_gates.YGate:
                 circuit.apply_gate("Y", *op_qubits)
             elif gate == lib.standard_gates.ZGate:
                 circuit.apply_gate("Z", *op_qubits)
+            elif gate == lib.standard_gates.CXGate:
+                circuit.apply_gate("CX", *op_qubits)
+            elif gate == lib.standard_gates.CYGate:
+                circuit.apply_gate("CY", *op_qubits)
+            elif gate == lib.standard_gates.CZGate:
+                circuit.apply_gate("CZ", *op_qubits)
             else:
                 print(f"Not implemented for a gate: {gate}")
         elif opcode == OpCode.ConditionedGate:

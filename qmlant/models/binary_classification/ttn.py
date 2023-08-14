@@ -27,7 +27,7 @@ class TTN:
         use_mera: bool = ...,
         insert_barrier: bool = ...,
         dry_run: Literal[True] = ...,
-    ) -> int:
+    ) -> tuple[int, int]:
         ...
 
     @classmethod
@@ -37,7 +37,7 @@ class TTN:
         use_mera: bool = False,
         insert_barrier: bool = False,
         dry_run: bool = False,
-    ) -> QuantumCircuit | int:
+    ) -> QuantumCircuit | tuple[int, int]:
         """make a Tree TensorNetowrk based quantum circuit
 
         Hierarchical quantum classifiers.
@@ -50,14 +50,13 @@ class TTN:
             dry_run (bool): True: return only number of needed parameters. False: return a circuit.
 
         Returns:
-            number of needed parameters or a circuit
+            numbers of needed parameters or a circuit
         """
 
         if dry_run:
             length_feature = cls._make_init_circuit(n_qubits, dry_run=True)
             length_ansatz = cls._make_ansatz(n_qubits, use_mera=use_mera, dry_run=True)
-            length = length_feature + length_ansatz
-            return length
+            return length_feature, length_ansatz
 
         qc: QuantumCircuit = cls._make_init_circuit(n_qubits)
         ansatz = cls._make_ansatz(n_qubits, use_mera=use_mera, insert_barrier=insert_barrier)

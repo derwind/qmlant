@@ -31,7 +31,7 @@ class TTN:
         ...
 
     @classmethod
-    def make_ttn_placeholder_circuit(
+    def make_placeholder_circuit(
         cls,
         n_qubits: int,
         use_mera: bool = False,
@@ -66,7 +66,7 @@ class TTN:
         return qc
 
     @classmethod
-    def get_ttn_hamiltonian(cls, n_qubits: int) -> str:
+    def get_hamiltonian(cls, n_qubits: int) -> str:
         """make a Hamiltonian for a Tree TensorNetowrk based quantum circuit
 
         Hierarchical quantum classifiers.

@@ -10,7 +10,7 @@ from qiskit.circuit import ParameterVector
 class TTN:
     @overload
     @classmethod
-    def make_ttn_placeholder_circuit(
+    def make_placeholder_circuit(
         cls,
         n_qubits: int,
         use_mera: bool = ...,
@@ -21,7 +21,7 @@ class TTN:
 
     @overload
     @classmethod
-    def make_ttn_placeholder_circuit(
+    def make_placeholder_circuit(
         cls,
         n_qubits: int,
         use_mera: bool = ...,

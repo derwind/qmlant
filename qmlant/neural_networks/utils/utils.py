@@ -28,6 +28,17 @@ def find_ry_locs(
 def find_ry_locs(
     qc_pl: QuantumCircuit, hamiltonian: str, return_tn: bool = False
 ) -> dict[str, tuple[int, int]] | tuple[dict[str, tuple[int, int]], str, list[cp.ndarray]]:
+    """find Ry (whose name are "x[i]", "θ[i]" etc.) locations in the given placeholder circuit
+
+    Args:
+        qc_pl (QuantumCircuit): a given placeholder circuit
+        hamiltonian (str): a Hamiltonian
+        return_tn (bool): return a TensorNetwork or not
+
+    Returns:
+        dict from parameter names to locations, and a TensorNetwork if return_tn is True
+    """
+
     length = len(qc_pl.parameters)
     eps = 0.01
     params = np.arange(eps, np.pi, (np.pi - eps) / length)

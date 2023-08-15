@@ -7,7 +7,7 @@ import cupy as cp
 import numpy as np
 from cuquantum import contract
 
-from .neural_network import Ry
+from .neural_network import Ry_Rydag
 
 
 class EstimatorTN:
@@ -84,8 +84,7 @@ class EstimatorTN:
             theta = pname2theta[pname]  # e.g. pname = "θ[0]"
             loc, dag_loc = pname2locs[pname]
             backups = {loc: operands[loc], dag_loc: operands[dag_loc]}
-            operands[loc] = Ry(theta + phase_shift)
-            operands[dag_loc] = Ry(-(theta + phase_shift))
+            operands[loc], operands[dag_loc] = Ry_Rydag(theta + phase_shift)
             yield operands
         finally:
             for i, v in backups.items():

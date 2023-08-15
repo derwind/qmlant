@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import re
 from collections.abc import Sequence
 
 import cupy as cp
@@ -8,7 +9,7 @@ import numpy as np
 from cuquantum import contract
 
 from .neural_network import Ry_Rydag
-from .utils import replace_ry_phase_shift
+from .utils import replace_by_batch, replace_ry, replace_ry_phase_shift
 
 
 class EstimatorTN:
@@ -22,6 +23,60 @@ class EstimatorTN:
     def __init__(self, pname2locs: dict[str, tuple[int, int]], pname_symbol: str = "θ"):
         self.pname2locs = pname2locs
         self.pname_symbol = pname_symbol
+
+    def prepare_circuit(
+        self,
+        batch: np.ndarray,
+        params: Sequence[float],
+        expr: str,
+        operands: list[cp.ndarray],
+    ) -> tuple[str, list[cp.ndarray]]:
+        """prepare a circuit for forward process setting batch and parameters to the circuit.
+        """
+
+        pname2theta_list = {
+            f"x[{i}]": batch[:, i].flatten().tolist() for i in range(batch.shape[1])
+        }
+        expr, operands = replace_by_batch(expr, operands, pname2theta_list, self.pname2locs)
+
+        pname2theta = {f"{self.pname_symbol}[{i}]": params[i] for i in range(len(params))}
+        operands = replace_ry(operands, pname2theta, self.pname2locs)
+
+        return expr, operands
+
+    def _prepare_backward_circuit(
+        self, forward_expr: str, forward_operands: list[cp.ndarray], param_symbol: str = "孕"
+    ) -> tuple[str, list[cp.ndarray]]:
+        # ansatz portion only
+        pname2locs = {
+            pname: locs
+            for pname, locs in self.pname2locs.items()
+            if pname.startswith(self.pname_symbol)
+        }
+        n_params = len(pname2locs)
+        param_locs = set()
+        for loc, loc_dag in pname2locs.values():
+            param_locs.add(loc)
+            param_locs.add(loc_dag)
+
+        ins, out = re.split(r"\s*->\s*", forward_expr)
+        ins = re.split(r"\s*,\s*", ins)
+
+        backward_ins = []
+        backward_operands = []
+
+        for i, (idx, ops) in enumerate(zip(ins, forward_operands)):
+            if i not in param_locs:
+                backward_ins.append(idx)
+                backward_operands.append(ops)
+                continue
+
+            backward_ins.append(param_symbol + idx)
+            ops = cp.expand_dims(ops, 0)
+            ops = cp.ascontiguousarray(cp.broadcast_to(ops, (2 * n_params, *ops.shape[1:])))
+            backward_operands.append(ops)
+
+        return ",".join(backward_ins) + "->" + out + param_symbol, backward_operands
 
     def forward(self, expr: str, operands: list[cp.ndarray]) -> np.ndarray:
         """Forward pass of the network.
@@ -49,6 +104,8 @@ class EstimatorTN:
         Returns:
             gradient values
         """
+
+        expr, operands = self._prepare_backward_circuit(expr, operands)
 
         pname2theta = {f"{self.pname_symbol}[{i}]": params[i] for i in range(len(params))}
         operands = replace_ry_phase_shift(operands, pname2theta, self.pname2locs)

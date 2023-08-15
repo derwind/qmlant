@@ -72,8 +72,9 @@ def replace_by_batch(
     operands: list[cp.ndarray],
     pname2theta_list: dict[str, list[float] | np.ndarray],
     pname2locs: dict[str, tuple[int, int]],
+    batch_symbol: str = "撥",
 ) -> tuple[str, list[cp.ndarray]]:
-    batch_symbol = "撥"  # symbols are: a, b, c, ..., z, A, B, C, ..., 撥
+    # symbols are: a, b, c, ..., z, A, B, C, ..., 撥
     ins, out = re.split(r"\s*->\s*", expr)
     ins = re.split(r"\s*,\s*", ins)
     for pname, theta_list in pname2theta_list.items():  # e.g. pname[0] = "x[0]"

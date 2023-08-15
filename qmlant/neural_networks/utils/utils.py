@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from typing import Literal, overload
 
 import cupy as cp
@@ -103,5 +104,24 @@ def replace_ry(
         loc, dag_loc = pname2locs[pname]
         operands[loc] = ry
         operands[dag_loc] = ry_dag
+
+    return operands
+
+
+def replace_ry_phase_shift(
+    operands: list[cp.ndarray],
+    pname2theta: dict[str, float],
+    pname2locs: dict[str, tuple[int, int]],
+    phase_shift_list: Sequence[float] = (np.pi / 2, -np.pi / 2),
+) -> list[cp.ndarray]:
+    i = 0
+    # θ[0]: [π/2, -π/2], θ[1]: [π/2, -π/2], ...
+    for pname, theta in pname2theta.items():  # e.g. pname[0] = "θ[0]"
+        for phase_shift in phase_shift_list:
+            ry, ry_dag = Ry_Rydag(theta + phase_shift)
+            loc, dag_loc = pname2locs[pname]
+            operands[loc][i, :] = ry
+            operands[dag_loc][i, :] = ry_dag
+            i += 1
 
     return operands

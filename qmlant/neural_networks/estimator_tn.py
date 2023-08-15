@@ -8,6 +8,7 @@ import numpy as np
 from cuquantum import contract
 
 from .neural_network import Ry_Rydag
+from .utils import replace_ry_phase_shift
 
 
 class EstimatorTN:
@@ -36,6 +37,31 @@ class EstimatorTN:
         return cp.asnumpy(contract(expr, *operands).real.reshape(-1, 1))
 
     def backward(
+        self, expr: str, operands: list[cp.ndarray], params: Sequence[float]
+    ) -> np.ndarray:
+        """Backward pass of the network.
+
+        Args:
+            expr (str): `expr` by `CircuitToEinsum`
+            operands (list[cp.ndarray]): `operands` by `CircuitToEinsum`
+            params (Sequence[float]): phase params for ansatz portion
+
+        Returns:
+            gradient values
+        """
+
+        pname2theta = {f"{self.pname_symbol}[{i}]": params[i] for i in range(len(params))}
+        operands = replace_ry_phase_shift(operands, pname2theta, self.pname2locs)
+        #     p0_p, p0_m, p1_p, p1_m, ...
+        # b0  xx    xx    xx    xx
+        # b1  xx    xx    xx    xx
+        # b2  xx    xx    xx    xx
+        expvals = cp.asnumpy(contract(expr, *operands).real)
+        for i in range(0, expvals.shape[1], 2):
+            expvals[:, i] = (expvals[:, i] - expvals[:, i + 1]) / 2
+        return expvals[:, range(0, expvals.shape[1], 2)]
+
+    def old_backward(
         self, expr: str, operands: list[cp.ndarray], params: Sequence[float]
     ) -> np.ndarray:
         """Backward pass of the network.

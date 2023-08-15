@@ -8,7 +8,7 @@ import numpy as np
 from cuquantum import CircuitToEinsum
 from qiskit import QuantumCircuit
 
-from ..neural_network import Ry
+from ..neural_network import Ry_Rydag
 
 
 @overload
@@ -38,8 +38,7 @@ def find_ry_locs(
 
     pname2locs: dict[str, tuple[int, int]] = {}
     for name, p in name2param.items():
-        ry = Ry(p)
-        ry_dag = Ry(-p)
+        ry, ry_dag = Ry_Rydag(p)
         loc = None
         dag_loc = None
         for i, t in enumerate(operands):
@@ -66,8 +65,9 @@ def replace_by_batch(
     ins, out = re.split(r"\s*->\s*", expr)
     ins = re.split(r"\s*,\s*", ins)
     for pname, theta_list in pname2theta_list.items():  # e.g. pname[0] = "x[0]"
-        batch = cp.array([Ry(theta) for theta in theta_list])
-        batch_dag = cp.array([Ry(-theta) for theta in theta_list])
+        batch_and_batch_dag = cp.array([[*Ry_Rydag(theta)] for theta in theta_list])
+        batch = batch_and_batch_dag[:, 0]
+        batch_dag = batch_and_batch_dag[:, 1]
         loc, dag_loc = pname2locs[pname]
         operands[loc] = batch
         operands[dag_loc] = batch_dag
@@ -88,8 +88,7 @@ def replace_ry(
     pname2locs: dict[str, tuple[int, int]],
 ) -> list[cp.ndarray]:
     for pname, theta in pname2theta.items():  # e.g. pname[0] = "θ[0]"
-        ry = Ry(theta)
-        ry_dag = Ry(-theta)
+        ry, ry_dag = Ry_Rydag(theta)
         loc, dag_loc = pname2locs[pname]
         operands[loc] = ry
         operands[dag_loc] = ry_dag

@@ -1,1 +1,2 @@
-from .datasets import BaseDataset, Iris
+from .iris import Iris
+from .mnist import KMNIST49

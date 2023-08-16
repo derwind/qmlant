@@ -6,26 +6,9 @@ from typing import Any, Callable
 import numpy as np
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
-from torch.utils import data as torch_data
 
 
-class BaseDataset(torch_data.Dataset):
-    def __init__(
-        self,
-        transform: Callable | None = None,
-        target_transform: Callable | None = None,
-    ) -> None:
-        self.transform = transform
-        self.target_transform = target_transform
-
-    def __getitem__(self, index: int) -> Any:
-        raise NotImplementedError
-
-    def __len__(self) -> int:
-        raise NotImplementedError
-
-
-class Iris(BaseDataset):
+class Iris:
     classes = [
         "0 - setosa",
         "1 - versicolor",
@@ -40,7 +23,8 @@ class Iris(BaseDataset):
         target_transform: Callable | None = None,
         subclass_targets: Sequence[int] | None = None,
     ) -> None:
-        super().__init__(transform=transform, target_transform=target_transform)
+        self.transform = transform
+        self.target_transform = target_transform
         self.train = train
         self.test_size = test_size
         self.subclass_targets = subclass_targets

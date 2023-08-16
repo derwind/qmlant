@@ -4,7 +4,7 @@ import cupy as cp
 import numpy as np
 
 
-def Ry(theta: float, xp=cp):
+def Ry(theta: float, xp=cp) -> cp.ndarray:
     cos = xp.cos(theta / 2)
     sin = xp.sin(theta / 2)
     return xp.array(
@@ -13,7 +13,7 @@ def Ry(theta: float, xp=cp):
     )
 
 
-def Ry_Rydag(theta: float, xp=cp):
+def Ry_Rydag(theta: float, xp=cp) -> tuple[np.ndarray | cp.ndarray, np.ndarray | cp.ndarray]:
     cos = xp.cos(theta / 2)
     sin = xp.sin(theta / 2)
     ry_rydag = xp.array(
@@ -21,3 +21,11 @@ def Ry_Rydag(theta: float, xp=cp):
         dtype=complex,
     )
     return ry_rydag[0], ry_rydag[1]
+
+
+def Ry_Rydag_direct(theta: float, mat: cp.ndarray, mat_dag: cp.ndarray) -> None:
+    cos = cp.cos(theta / 2)
+    sin = cp.sin(theta / 2)
+    mat[0][0] = mat[1][1] = mat_dag[0][0] = mat_dag[1][1] = cos
+    mat[0][1] = mat_dag[1][0] = -sin
+    mat[1][0] = mat_dag[0][1] = sin

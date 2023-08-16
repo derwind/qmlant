@@ -31,8 +31,7 @@ class EstimatorTN:
         expr: str,
         operands: list[cp.ndarray],
     ) -> tuple[str, list[cp.ndarray]]:
-        """prepare a circuit for forward process setting batch and parameters to the circuit.
-        """
+        """prepare a circuit for forward process setting batch and parameters to the circuit."""
 
         pname2theta_list = {
             f"x[{i}]": batch[:, i].flatten().tolist() for i in range(batch.shape[1])

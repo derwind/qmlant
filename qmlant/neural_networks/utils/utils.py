@@ -78,7 +78,7 @@ def replace_by_batch(
     ins, out = re.split(r"\s*->\s*", expr)
     ins = re.split(r"\s*,\s*", ins)
     for pname, theta_list in pname2theta_list.items():  # e.g. pname[0] = "x[0]"
-        batch_and_batch_dag = cp.array([[*Ry_Rydag(theta)] for theta in theta_list])
+        batch_and_batch_dag = cp.array([[*Ry_Rydag(theta, xp=np)] for theta in theta_list])
         batch = batch_and_batch_dag[:, 0]
         batch_dag = batch_and_batch_dag[:, 1]
         loc, dag_loc = pname2locs[pname]

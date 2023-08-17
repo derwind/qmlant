@@ -3,12 +3,13 @@ import warnings
 
 warnings.simplefilter("ignore", DeprecationWarning)
 
-import cupy as cp
-import numpy as np
-from qiskit import QuantumCircuit
-from qiskit.circuit import ParameterVector
-from qmlant.neural_networks import Ry, Ry_Rydag
-from qmlant.neural_networks.utils import (
+import cupy as cp  # pylint: disable=wrong-import-position
+import numpy as np  # pylint: disable=wrong-import-position
+from qiskit import QuantumCircuit  # pylint: disable=wrong-import-position
+from qiskit.circuit import ParameterVector  # pylint: disable=wrong-import-position
+
+from qmlant.neural_networks import Ry, Ry_Rydag  # pylint: disable=wrong-import-position
+from qmlant.neural_networks.utils import (  # pylint: disable=wrong-import-position
     find_ry_locs,
     replace_by_batch,
     replace_ry,
@@ -185,7 +186,7 @@ class TestReplacer(unittest.TestCase):
 
         pname2locs, expr, operands = find_ry_locs(qc, "ZZ", return_tn=True)
 
-        pname2theta_list = {"x[0]": [np.pi / 6]*4, "x[1]": [np.pi / 4]*4}
+        pname2theta_list = {"x[0]": [np.pi / 6] * 4, "x[1]": [np.pi / 4] * 4}
         _, operands2 = replace_by_batch(
             expr, operands, pname2theta_list, pname2locs, batch_symbol="ξ"
         )
@@ -197,34 +198,42 @@ class TestReplacer(unittest.TestCase):
             self.ZERO,
             self.ZERO,
             self.X,
-            cp.array([
-                self.naive_Ry(np.pi / 6 + np.pi / 2),
-                self.naive_Ry(np.pi / 6 - np.pi / 2),
-                self.naive_Ry(np.pi / 6),
-                self.naive_Ry(np.pi / 6)
-            ]),
+            cp.array(
+                [
+                    self.naive_Ry(np.pi / 6 + np.pi / 2),
+                    self.naive_Ry(np.pi / 6 - np.pi / 2),
+                    self.naive_Ry(np.pi / 6),
+                    self.naive_Ry(np.pi / 6),
+                ]
+            ),
             self.X,
-            cp.array([
-                self.naive_Ry(np.pi / 4),
-                self.naive_Ry(np.pi / 4),
-                self.naive_Ry(np.pi / 4 + np.pi / 2),
-                self.naive_Ry(np.pi / 4 - np.pi / 2)
-            ]),
+            cp.array(
+                [
+                    self.naive_Ry(np.pi / 4),
+                    self.naive_Ry(np.pi / 4),
+                    self.naive_Ry(np.pi / 4 + np.pi / 2),
+                    self.naive_Ry(np.pi / 4 - np.pi / 2),
+                ]
+            ),
             self.Z,
             self.Z,
-            cp.array([
-                self.naive_Ry(-np.pi / 4),
-                self.naive_Ry(-np.pi / 4),
-                self.naive_Ry(-(np.pi / 4 + np.pi / 2)),
-                self.naive_Ry(-(np.pi / 4 - np.pi / 2))
-            ]),
+            cp.array(
+                [
+                    self.naive_Ry(-np.pi / 4),
+                    self.naive_Ry(-np.pi / 4),
+                    self.naive_Ry(-(np.pi / 4 + np.pi / 2)),
+                    self.naive_Ry(-(np.pi / 4 - np.pi / 2)),
+                ]
+            ),
             self.X,
-            cp.array([
-                self.naive_Ry(-(np.pi / 6 + np.pi / 2)),
-                self.naive_Ry(-(np.pi / 6 - np.pi / 2)),
-                self.naive_Ry(-np.pi / 6),
-                self.naive_Ry(-np.pi / 6)
-            ]),
+            cp.array(
+                [
+                    self.naive_Ry(-(np.pi / 6 + np.pi / 2)),
+                    self.naive_Ry(-(np.pi / 6 - np.pi / 2)),
+                    self.naive_Ry(-np.pi / 6),
+                    self.naive_Ry(-np.pi / 6),
+                ]
+            ),
             self.X,
             self.ZERO,
             self.ZERO,

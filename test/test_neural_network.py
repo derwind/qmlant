@@ -63,6 +63,7 @@ class TestReplacer(unittest.TestCase):
         qc.x(1)
         qc.ry(params[0], 0)
         qc.ry(params[1], 1)
+
         params2locs = find_ry_locs(qc, "ZZ", return_tn=False)
         answer = {"x[0]": (3, 10), "x[1]": (5, 8)}
         self.assertEqual(params2locs, answer)
@@ -101,17 +102,18 @@ class TestReplacer(unittest.TestCase):
         qc.x(1)
         qc.ry(params[0], 0)
         qc.ry(params[1], 1)
-        params2locs = find_ry_locs(qc, "ZZ", return_tn=False)
+
+        pname2locs = find_ry_locs(qc, "ZZ", return_tn=False)
         answer = {"x[0]": (3, 10), "x[1]": (5, 8)}
-        self.assertEqual(params2locs, answer)
+        self.assertEqual(pname2locs, answer)
 
         answer_expr = "a,b,ca,dc,eb,fe,gd,hf,ih,ji,kg,lk,l,j->"
-        params2locs, expr, operands = find_ry_locs(qc, "ZZ", return_tn=True)
+        pname2locs, expr, operands = find_ry_locs(qc, "ZZ", return_tn=True)
         self.assertEqual(expr, answer_expr)
 
         pname2theta_list = {"x[0]": [np.pi / 6, np.pi / 3], "x[1]": [np.pi / 4, np.pi / 8]}
         expr2, operands2 = replace_by_batch(
-            expr, operands, pname2theta_list, params2locs, batch_symbol="ξ"
+            expr, operands, pname2theta_list, pname2locs, batch_symbol="ξ"
         )
         answer_expr2 = "a,b,ca,ξdc,eb,ξfe,gd,hf,ξih,ji,ξkg,lk,l,j->ξ"
         answer_operands2 = [
@@ -133,4 +135,100 @@ class TestReplacer(unittest.TestCase):
 
         self.assertEqual(expr2, answer_expr2)
         for ops, ops_ans in zip(operands2, answer_operands2):
+            self.assertEqual(cp.all(ops == ops_ans), True)
+
+    def test_replace_ry(self):
+        params = ParameterVector("x", 2)
+        qc = QuantumCircuit(2)
+        qc.x(0)
+        qc.x(1)
+        qc.ry(params[0], 0)
+        qc.ry(params[1], 1)
+
+        pname2locs = find_ry_locs(qc, "ZZ", return_tn=False)
+        answer = {"x[0]": (3, 10), "x[1]": (5, 8)}
+        self.assertEqual(pname2locs, answer)
+
+        answer_expr = "a,b,ca,dc,eb,fe,gd,hf,ih,ji,kg,lk,l,j->"
+        pname2locs, expr, operands = find_ry_locs(qc, "ZZ", return_tn=True)
+        self.assertEqual(expr, answer_expr)
+
+        pname2theta_list = {"x[0]": np.pi / 6, "x[1]": np.pi / 4}
+        operands2 = replace_ry(operands, pname2theta_list, pname2locs)
+        answer_operands2 = [
+            self.ZERO,
+            self.ZERO,
+            self.X,
+            cp.array([self.naive_Ry(np.pi / 6)]),
+            self.X,
+            cp.array([self.naive_Ry(np.pi / 4)]),
+            self.Z,
+            self.Z,
+            cp.array([self.naive_Ry(-np.pi / 4)]),
+            self.X,
+            cp.array([self.naive_Ry(-np.pi / 6)]),
+            self.X,
+            self.ZERO,
+            self.ZERO,
+        ]
+
+        for ops, ops_ans in zip(operands2, answer_operands2):
+            self.assertEqual(cp.all(ops == ops_ans), True)
+
+    def test_replace_ry_phase_shift(self):
+        params = ParameterVector("x", 2)
+        qc = QuantumCircuit(2)
+        qc.x(0)
+        qc.x(1)
+        qc.ry(params[0], 0)
+        qc.ry(params[1], 1)
+
+        pname2locs, expr, operands = find_ry_locs(qc, "ZZ", return_tn=True)
+
+        pname2theta_list = {"x[0]": [np.pi / 6]*4, "x[1]": [np.pi / 4]*4}
+        _, operands2 = replace_by_batch(
+            expr, operands, pname2theta_list, pname2locs, batch_symbol="ξ"
+        )
+
+        pname2theta = {"x[0]": np.pi / 6, "x[1]": np.pi / 4}
+        operands3 = replace_ry_phase_shift(operands2, pname2theta, pname2locs)
+
+        answer_operands3 = [
+            self.ZERO,
+            self.ZERO,
+            self.X,
+            cp.array([
+                self.naive_Ry(np.pi / 6 + np.pi / 2),
+                self.naive_Ry(np.pi / 6 - np.pi / 2),
+                self.naive_Ry(np.pi / 6),
+                self.naive_Ry(np.pi / 6)
+            ]),
+            self.X,
+            cp.array([
+                self.naive_Ry(np.pi / 4),
+                self.naive_Ry(np.pi / 4),
+                self.naive_Ry(np.pi / 4 + np.pi / 2),
+                self.naive_Ry(np.pi / 4 - np.pi / 2)
+            ]),
+            self.Z,
+            self.Z,
+            cp.array([
+                self.naive_Ry(-np.pi / 4),
+                self.naive_Ry(-np.pi / 4),
+                self.naive_Ry(-(np.pi / 4 + np.pi / 2)),
+                self.naive_Ry(-(np.pi / 4 - np.pi / 2))
+            ]),
+            self.X,
+            cp.array([
+                self.naive_Ry(-(np.pi / 6 + np.pi / 2)),
+                self.naive_Ry(-(np.pi / 6 - np.pi / 2)),
+                self.naive_Ry(-np.pi / 6),
+                self.naive_Ry(-np.pi / 6)
+            ]),
+            self.X,
+            self.ZERO,
+            self.ZERO,
+        ]
+
+        for ops, ops_ans in zip(operands3, answer_operands3):
             self.assertEqual(cp.all(ops == ops_ans), True)

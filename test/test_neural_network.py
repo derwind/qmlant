@@ -66,7 +66,7 @@ class TestReplacer(unittest.TestCase):
         qc.ry(params[1], 1)
 
         params2locs = find_ry_locs(qc, "ZZ", return_tn=False)
-        answer = {"x[0]": (3, 10), "x[1]": (5, 8)}
+        answer = {"x[0]": (3, 10, Ry_Rydag), "x[1]": (5, 8, Ry_Rydag)}
         self.assertEqual(params2locs, answer)
 
         answer_expr = "a,b,ca,dc,eb,fe,gd,hf,ih,ji,kg,lk,l,j->"
@@ -105,7 +105,7 @@ class TestReplacer(unittest.TestCase):
         qc.ry(params[1], 1)
 
         pname2locs = find_ry_locs(qc, "ZZ", return_tn=False)
-        answer = {"x[0]": (3, 10), "x[1]": (5, 8)}
+        answer = {"x[0]": (3, 10, Ry_Rydag), "x[1]": (5, 8, Ry_Rydag)}
         self.assertEqual(pname2locs, answer)
 
         answer_expr = "a,b,ca,dc,eb,fe,gd,hf,ih,ji,kg,lk,l,j->"
@@ -147,7 +147,7 @@ class TestReplacer(unittest.TestCase):
         qc.ry(params[1], 1)
 
         pname2locs = find_ry_locs(qc, "ZZ", return_tn=False)
-        answer = {"x[0]": (3, 10), "x[1]": (5, 8)}
+        answer = {"x[0]": (3, 10, Ry_Rydag), "x[1]": (5, 8, Ry_Rydag)}
         self.assertEqual(pname2locs, answer)
 
         answer_expr = "a,b,ca,dc,eb,fe,gd,hf,ih,ji,kg,lk,l,j->"

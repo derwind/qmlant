@@ -9,7 +9,7 @@ import numpy as np
 from cuquantum import CircuitToEinsum
 from qiskit import QuantumCircuit
 
-from ..neural_network import Ry_Rydag, Ry_Rydag_direct
+from ..neural_network import Ry_Rydag
 
 
 @overload
@@ -102,7 +102,7 @@ def replace_ry(
 ) -> list[cp.ndarray]:
     for pname, theta in pname2theta.items():  # e.g. pname[0] = "θ[0]"
         loc, dag_loc = pname2locs[pname]
-        Ry_Rydag_direct(theta, operands[loc], operands[dag_loc])
+        Ry_Rydag(theta, operands[loc], operands[dag_loc])
 
     return operands
 
@@ -118,7 +118,7 @@ def replace_ry_phase_shift(
     for pname, theta in pname2theta.items():  # e.g. pname[0] = "θ[0]"
         for phase_shift in phase_shift_list:
             loc, dag_loc = pname2locs[pname]
-            Ry_Rydag_direct(theta + phase_shift, operands[loc][i], operands[dag_loc][i])
+            Ry_Rydag(theta + phase_shift, operands[loc][i], operands[dag_loc][i])
             i += 1
 
     return operands

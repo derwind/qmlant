@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 
+import quimb as qu
 import quimb.tensor as qtn
 from qiskit import QuantumCircuit, qasm2
 from qiskit._qasm2 import (  # pylint: disable=no-name-in-module
@@ -63,6 +64,8 @@ def circuit_to_quimb_tn(qc: QuantumCircuit) -> qtn.Circuit | None:
                 circuit.apply_gate("RZ", *parameters, *op_qubits)
             elif gate == lib.standard_gates.SwapGate:
                 circuit.apply_gate("SWAP", *parameters, *op_qubits)
+            elif gate == lib.standard_gates.PhaseGate:
+                circuit.apply_gate(qu.phase_gate(*parameters), *op_qubits)
             elif gate == lib.standard_gates.SGate:
                 circuit.apply_gate("S", *op_qubits)
             elif gate == lib.standard_gates.TGate:

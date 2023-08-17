@@ -9,33 +9,33 @@ import numpy as np
 from cuquantum import CircuitToEinsum
 from qiskit import QuantumCircuit
 
-from ..neural_network import Ry_Rydag
+from ..neural_network import Rx_Rxdag, Ry_Rydag, Rz_Rzdag, Rx_Rxdag_Ry_Rydag_Rz_Rzdag
 
 
 Pauli = Callable
 
 
 @overload
-def find_ry_locs(
+def find_pauli_locs(
     qc_pl: QuantumCircuit, hamiltonian: str, return_tn: Literal[False]
 ) -> dict[str, tuple[int, int, Pauli]]:
     ...
 
 
 @overload
-def find_ry_locs(
+def find_pauli_locs(
     qc_pl: QuantumCircuit, hamiltonian: str, return_tn: Literal[True]
 ) -> tuple[dict[str, tuple[int, int, Pauli]], str, list[cp.ndarray]]:
     ...
 
 
-def find_ry_locs(
+def find_pauli_locs(
     qc_pl: QuantumCircuit, hamiltonian: str, return_tn: bool = False
 ) -> (
     dict[str, tuple[int, int, Pauli]]
     | tuple[dict[str, tuple[int, int, Pauli]], str, list[cp.ndarray]]
 ):
-    """find Ry (whose name are "x[i]", "θ[i]" etc.) locations in the given placeholder circuit
+    """find Pauli (whose name are "x[i]", "θ[i]" etc.) locations in the given placeholder circuit
 
     Args:
         qc_pl (QuantumCircuit): a given placeholder circuit
@@ -56,16 +56,28 @@ def find_ry_locs(
 
     pname2locs: dict[str, tuple[int, int, Pauli]] = {}
     for name, p in name2param.items():
-        ry, ry_dag = Ry_Rydag(p)
+        rx, rx_dag, ry, ry_dag, rz, rz_dag = Rx_Rxdag_Ry_Rydag_Rz_Rzdag(p)
         loc = None
         dag_loc = None
+        make_paulis: Pauli = None
         for i, t in enumerate(operands):
-            if cp.allclose(t, ry):
+            if cp.allclose(t, rx):
                 loc = i
+                make_paulis = Rx_Rxdag
+            elif cp.allclose(t, rx_dag):
+                dag_loc = i  # i - len(operands)
+            elif cp.allclose(t, ry):
+                loc = i
+                make_paulis = Ry_Rydag
             elif cp.allclose(t, ry_dag):
                 dag_loc = i  # i - len(operands)
+            elif cp.allclose(t, rz):
+                loc = i
+                make_paulis = Rz_Rzdag
+            elif cp.allclose(t, rz_dag):
+                dag_loc = i  # i - len(operands)
             if loc and dag_loc:
-                pname2locs[name] = (loc, dag_loc, Ry_Rydag)
+                pname2locs[name] = (loc, dag_loc, make_paulis)
                 break
     if return_tn:
         return pname2locs, expr, operands
@@ -101,7 +113,7 @@ def replace_by_batch(
     return new_expr, operands
 
 
-def replace_ry(
+def replace_pauli(
     operands: list[cp.ndarray],
     pname2theta: dict[str, float],
     pname2locs: dict[str, tuple[int, int, Pauli]],
@@ -113,7 +125,7 @@ def replace_ry(
     return operands
 
 
-def replace_ry_phase_shift(
+def replace_pauli_phase_shift(
     operands: list[cp.ndarray],
     pname2theta: dict[str, float],
     pname2locs: dict[str, tuple[int, int, Pauli]],

@@ -20,9 +20,9 @@ from qmlant.datasets import Iris  # pylint: disable=wrong-import-position
 from qmlant.models.binary_classification import TTN  # pylint: disable=wrong-import-position
 from qmlant.neural_networks import EstimatorTN  # pylint: disable=wrong-import-position
 from qmlant.neural_networks.utils import (  # pylint: disable=wrong-import-position
-    find_ry_locs,
+    find_pauli_locs,
     replace_by_batch,
-    replace_ry,
+    replace_pauli,
 )
 from qmlant.transforms import MapLabel, ToTensor  # pylint: disable=wrong-import-position
 
@@ -43,7 +43,7 @@ class PQCTrainerTN:  # pylint: disable=too-few-public-methods
         callbacks: list | None = None,
         epochs: int = 1,
     ) -> None:
-        pname2locs, expr, oprands = find_ry_locs(self.qc_pl, operator, return_tn=True)
+        pname2locs, expr, oprands = find_pauli_locs(self.qc_pl, operator, return_tn=True)
 
         dataloader = DataLoader(dataset, batch_size, shuffle=True, drop_last=True)
         callbacks = callbacks if callbacks is not None else []
@@ -169,16 +169,16 @@ class TestIrus(unittest.TestCase):
 
         min_loss = min(loss_list)
         self.assertLess(min_loss, 0.3)
-        self.assertEqual(3.5 < opt_params[0] < 4.5, True)
-        self.assertEqual(-0.6 < opt_params[1] < -0.5, True)
-        self.assertEqual(4.5 < opt_params[2] < 5.5, True)
-        self.assertEqual(5.0 < opt_params[3] < 6.0, True)
-        self.assertEqual(2.0 < opt_params[4] < 3.0, True)
-        self.assertEqual(1.5 < opt_params[5] < 2.5, True)
-        self.assertEqual(0.5 < opt_params[6] < 1.5, True)
+        self.assertTrue(3.5 < opt_params[0] < 4.5, opt_params[0])
+        self.assertTrue(-0.6 < opt_params[1] < -0.5, opt_params[1])
+        self.assertTrue(4.5 < opt_params[2] < 5.5, opt_params[2])
+        self.assertTrue(5.0 < opt_params[3] < 6.0, opt_params[3])
+        self.assertTrue(2.0 < opt_params[4] < 3.0, opt_params[4])
+        self.assertTrue(1.5 < opt_params[5] < 2.5, opt_params[5])
+        self.assertTrue(0.5 < opt_params[6] < 1.5, opt_params[6])
 
         params = opt_params
-        pname2locs, expr, operands = find_ry_locs(placeholder_circuit, hamiltonian, return_tn=True)
+        pname2locs, expr, operands = find_pauli_locs(placeholder_circuit, hamiltonian, return_tn=True)
         pname2theta = {f"θ[{i}]": params[i] for i in range(len(params))}
 
         testloader = DataLoader(testset, 32)
@@ -194,7 +194,7 @@ class TestIrus(unittest.TestCase):
             }
             expr, operands = replace_by_batch(expr, operands, pname2theta_list, pname2locs)
 
-            operands = replace_ry(operands, pname2theta, pname2locs)
+            operands = replace_pauli(operands, pname2theta, pname2locs)
 
             expvals = cp.asnumpy(contract(expr, *operands).real)
 

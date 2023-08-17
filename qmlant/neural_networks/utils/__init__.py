@@ -1,1 +1,7 @@
-from .utils import find_ry_locs, replace_by_batch, replace_ry, replace_ry_phase_shift, Pauli
+from .utils import (
+    find_pauli_locs,
+    replace_by_batch,
+    replace_pauli,
+    replace_pauli_phase_shift,
+    Pauli,
+)

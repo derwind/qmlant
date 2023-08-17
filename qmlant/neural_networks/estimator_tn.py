@@ -8,7 +8,7 @@ import cupy as cp
 import numpy as np
 from cuquantum import contract
 
-from .utils import replace_by_batch, replace_ry, replace_ry_phase_shift, Pauli
+from .utils import replace_by_batch, replace_pauli, replace_pauli_phase_shift, Pauli
 
 
 class EstimatorTN:
@@ -38,7 +38,7 @@ class EstimatorTN:
         expr, operands = replace_by_batch(expr, operands, pname2theta_list, self.pname2locs)
 
         pname2theta = {f"{self.pname_symbol}[{i}]": params[i] for i in range(len(params))}
-        operands = replace_ry(operands, pname2theta, self.pname2locs)
+        operands = replace_pauli(operands, pname2theta, self.pname2locs)
 
         return expr, operands
 
@@ -106,7 +106,7 @@ class EstimatorTN:
         expr, operands = self._prepare_backward_circuit(expr, operands)
 
         pname2theta = {f"{self.pname_symbol}[{i}]": params[i] for i in range(len(params))}
-        operands = replace_ry_phase_shift(operands, pname2theta, self.pname2locs)
+        operands = replace_pauli_phase_shift(operands, pname2theta, self.pname2locs)
         #     p0_p, p0_m, p1_p, p1_m, ...
         # b0  xx    xx    xx    xx
         # b1  xx    xx    xx    xx
@@ -136,11 +136,11 @@ class EstimatorTN:
         for i in range(len(pname2theta)):
             pname = f"θ[{i}]"
             # per batch
-            with self.temporarily_replace_ry(
+            with self.temporarily_replace_pauli(
                 operands, pname, pname2theta, self.pname2locs, np.pi / 2
             ):
                 expvals_p = cp.asnumpy(contract(expr, *operands).real.flatten())
-            with self.temporarily_replace_ry(
+            with self.temporarily_replace_pauli(
                 operands, pname, pname2theta, self.pname2locs, -np.pi / 2
             ):
                 expvals_m = cp.asnumpy(contract(expr, *operands).real.flatten())
@@ -152,7 +152,7 @@ class EstimatorTN:
 
     @classmethod
     @contextlib.contextmanager
-    def temporarily_replace_ry(
+    def temporarily_replace_pauli(
         cls,
         operands: list[cp.ndarray],
         pname: str,

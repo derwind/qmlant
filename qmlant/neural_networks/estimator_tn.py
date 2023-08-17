@@ -8,8 +8,7 @@ import cupy as cp
 import numpy as np
 from cuquantum import contract
 
-from .neural_network import Ry_Rydag
-from .utils import replace_by_batch, replace_ry, replace_ry_phase_shift
+from .utils import replace_by_batch, replace_ry, replace_ry_phase_shift, Pauli
 
 
 class EstimatorTN:
@@ -20,7 +19,7 @@ class EstimatorTN:
         pname_symbol (str): the symbol for ansatz portion (default: "θ")
     """
 
-    def __init__(self, pname2locs: dict[str, tuple[int, int]], pname_symbol: str = "θ"):
+    def __init__(self, pname2locs: dict[str, tuple[int, int, Pauli]], pname_symbol: str = "θ"):
         self.pname2locs = pname2locs
         self.pname_symbol = pname_symbol
 
@@ -54,7 +53,7 @@ class EstimatorTN:
         }
         n_params = len(pname2locs)
         param_locs = set()
-        for loc, loc_dag in pname2locs.values():
+        for loc, loc_dag, _ in pname2locs.values():
             param_locs.add(loc)
             param_locs.add(loc_dag)
 
@@ -158,15 +157,15 @@ class EstimatorTN:
         operands: list[cp.ndarray],
         pname: str,
         pname2theta: dict[str, float],
-        pname2locs: dict[str, tuple[int, int]],
+        pname2locs: dict[str, tuple[int, int, Pauli]],
         phase_shift: float = np.pi / 2,
     ):
         backups = {}
         try:
             theta = pname2theta[pname]  # e.g. pname = "θ[0]"
-            loc, dag_loc = pname2locs[pname]
+            loc, dag_loc, make_paulis = pname2locs[pname]
             backups = {loc: operands[loc], dag_loc: operands[dag_loc]}
-            operands[loc], operands[dag_loc] = Ry_Rydag(theta + phase_shift)
+            operands[loc], operands[dag_loc] = make_paulis(theta + phase_shift)
             yield operands
         finally:
             for i, v in backups.items():

@@ -16,7 +16,7 @@ def Ry(theta: float, xp=cp) -> cp.ndarray:
 
 
 @overload
-def Ry_Rydag(
+def Ry_Rydag(  # type: ignore
     theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
 ) -> tuple[np.ndarray | cp.ndarray, np.ndarray | cp.ndarray]:
     ...
@@ -42,3 +42,4 @@ def Ry_Rydag(
     mat[0][0] = mat[1][1] = mat_dag[0][0] = mat_dag[1][1] = cos
     mat[0][1] = mat_dag[1][0] = -sin
     mat[1][0] = mat_dag[0][1] = sin
+    return None

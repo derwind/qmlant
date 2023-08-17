@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Sequence, Callable
 from typing import Literal, overload
 
 import cupy as cp
@@ -12,23 +12,29 @@ from qiskit import QuantumCircuit
 from ..neural_network import Ry_Rydag
 
 
+Pauli = Callable
+
+
 @overload
 def find_ry_locs(
     qc_pl: QuantumCircuit, hamiltonian: str, return_tn: Literal[False]
-) -> dict[str, tuple[int, int]]:
+) -> dict[str, tuple[int, int, Pauli]]:
     ...
 
 
 @overload
 def find_ry_locs(
     qc_pl: QuantumCircuit, hamiltonian: str, return_tn: Literal[True]
-) -> tuple[dict[str, tuple[int, int]], str, list[cp.ndarray]]:
+) -> tuple[dict[str, tuple[int, int, Pauli]], str, list[cp.ndarray]]:
     ...
 
 
 def find_ry_locs(
     qc_pl: QuantumCircuit, hamiltonian: str, return_tn: bool = False
-) -> dict[str, tuple[int, int]] | tuple[dict[str, tuple[int, int]], str, list[cp.ndarray]]:
+) -> (
+    dict[str, tuple[int, int, Pauli]]
+    | tuple[dict[str, tuple[int, int, Pauli]], str, list[cp.ndarray]]
+):
     """find Ry (whose name are "x[i]", "θ[i]" etc.) locations in the given placeholder circuit
 
     Args:
@@ -48,7 +54,7 @@ def find_ry_locs(
     converter = CircuitToEinsum(qc)
     expr, operands = converter.expectation(hamiltonian)
 
-    pname2locs: dict[str, tuple[int, int]] = {}
+    pname2locs: dict[str, tuple[int, int, Pauli]] = {}
     for name, p in name2param.items():
         ry, ry_dag = Ry_Rydag(p)
         loc = None
@@ -59,7 +65,7 @@ def find_ry_locs(
             elif cp.allclose(t, ry_dag):
                 dag_loc = i  # i - len(operands)
             if loc and dag_loc:
-                pname2locs[name] = (loc, dag_loc)
+                pname2locs[name] = (loc, dag_loc, Ry_Rydag)
                 break
     if return_tn:
         return pname2locs, expr, operands
@@ -71,17 +77,17 @@ def replace_by_batch(
     expr: str,
     operands: list[cp.ndarray],
     pname2theta_list: dict[str, list[float] | np.ndarray],
-    pname2locs: dict[str, tuple[int, int]],
+    pname2locs: dict[str, tuple[int, int, Pauli]],
     batch_symbol: str = "撥",
 ) -> tuple[str, list[cp.ndarray]]:
     # symbols are: a, b, c, ..., z, A, B, C, ..., 撥
     ins, out = re.split(r"\s*->\s*", expr)
     ins = re.split(r"\s*,\s*", ins)
     for pname, theta_list in pname2theta_list.items():  # e.g. pname[0] = "x[0]"
-        batch_and_batch_dag = cp.array([[*Ry_Rydag(theta, xp=np)] for theta in theta_list])
+        loc, dag_loc, make_paulis = pname2locs[pname]
+        batch_and_batch_dag = cp.array([[*make_paulis(theta, xp=np)] for theta in theta_list])
         batch = batch_and_batch_dag[:, 0]
         batch_dag = batch_and_batch_dag[:, 1]
-        loc, dag_loc = pname2locs[pname]
         operands[loc] = batch
         operands[dag_loc] = batch_dag
         if len(ins[loc]) == 2:
@@ -98,11 +104,11 @@ def replace_by_batch(
 def replace_ry(
     operands: list[cp.ndarray],
     pname2theta: dict[str, float],
-    pname2locs: dict[str, tuple[int, int]],
+    pname2locs: dict[str, tuple[int, int, Pauli]],
 ) -> list[cp.ndarray]:
     for pname, theta in pname2theta.items():  # e.g. pname[0] = "θ[0]"
-        loc, dag_loc = pname2locs[pname]
-        Ry_Rydag(theta, operands[loc], operands[dag_loc])
+        loc, dag_loc, make_paulis = pname2locs[pname]
+        make_paulis(theta, operands[loc], operands[dag_loc])
 
     return operands
 
@@ -110,15 +116,15 @@ def replace_ry(
 def replace_ry_phase_shift(
     operands: list[cp.ndarray],
     pname2theta: dict[str, float],
-    pname2locs: dict[str, tuple[int, int]],
+    pname2locs: dict[str, tuple[int, int, Pauli]],
     phase_shift_list: Sequence[float] = (np.pi / 2, -np.pi / 2),
 ) -> list[cp.ndarray]:
     i = 0
     # θ[0]: [π/2, -π/2], θ[1]: [π/2, -π/2], ...
     for pname, theta in pname2theta.items():  # e.g. pname[0] = "θ[0]"
         for phase_shift in phase_shift_list:
-            loc, dag_loc = pname2locs[pname]
-            Ry_Rydag(theta + phase_shift, operands[loc][i], operands[dag_loc][i])
+            loc, dag_loc, make_paulis = pname2locs[pname]
+            make_paulis(theta + phase_shift, operands[loc][i], operands[dag_loc][i])
             i += 1
 
     return operands

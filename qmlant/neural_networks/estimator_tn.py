@@ -27,7 +27,7 @@ class EstimatorTN:
     def prepare_circuit(
         self,
         batch: np.ndarray,
-        params: Sequence[float],
+        params: Sequence[float] | np.ndarray,
         expr: str,
         operands: list[cp.ndarray],
     ) -> tuple[str, list[cp.ndarray]]:
@@ -91,7 +91,7 @@ class EstimatorTN:
         return cp.asnumpy(contract(expr, *operands).real.reshape(-1, 1))
 
     def backward(
-        self, expr: str, operands: list[cp.ndarray], params: Sequence[float]
+        self, expr: str, operands: list[cp.ndarray], params: Sequence[float] | np.ndarray
     ) -> np.ndarray:
         """Backward pass of the network.
 
@@ -118,7 +118,7 @@ class EstimatorTN:
         return expvals[:, range(0, expvals.shape[1], 2)]
 
     def old_backward(
-        self, expr: str, operands: list[cp.ndarray], params: Sequence[float]
+        self, expr: str, operands: list[cp.ndarray], params: Sequence[float] | np.ndarray
     ) -> np.ndarray:
         """Backward pass of the network.
 

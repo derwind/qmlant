@@ -19,7 +19,9 @@ class EstimatorTN:
         pname_symbol (str): the symbol for ansatz portion (default: "θ")
     """
 
-    def __init__(self, pname2locs: dict[str, tuple[int, int, Pauli]], pname_symbol: str = "θ"):
+    def __init__(
+        self, pname2locs: dict[str, tuple[list[int], list[int], Pauli]], pname_symbol: str = "θ"
+    ):
         self.pname2locs = pname2locs
         self.pname_symbol = pname_symbol
 
@@ -46,16 +48,15 @@ class EstimatorTN:
         self, forward_expr: str, forward_operands: list[cp.ndarray], param_symbol: str = "孕"
     ) -> tuple[str, list[cp.ndarray]]:
         # ansatz portion only
-        pname2locs = {
-            pname: locs
-            for pname, locs in self.pname2locs.items()
-            if pname.startswith(self.pname_symbol)
+        pname2locs: dict[str, set[int]] = {
+            pname: set(locs + dag_locs)
+            for pname, (locs, dag_locs, _) in self.pname2locs.items()
+            if pname.startswith(self.pname_symbol)  # "θ[i]"
         }
         n_params = len(pname2locs)
-        param_locs = set()
-        for loc, loc_dag, _ in pname2locs.values():
-            param_locs.add(loc)
-            param_locs.add(loc_dag)
+        param_locs: set[int] = set()
+        for locs in pname2locs.values():
+            param_locs.update(locs)
 
         ins, out = re.split(r"\s*->\s*", forward_expr)
         ins = re.split(r"\s*,\s*", ins)
@@ -64,11 +65,12 @@ class EstimatorTN:
         backward_operands = []
 
         for i, (idx, ops) in enumerate(zip(ins, forward_operands)):
-            if i not in param_locs:
+            if i not in param_locs:  # not ansatz params
                 backward_ins.append(idx)
                 backward_operands.append(ops)
                 continue
 
+            # multiplex ansatz params for simultaneous parameter-shift calculations
             backward_ins.append(param_symbol + idx)
             ops = cp.expand_dims(ops, 0)
             ops = cp.ascontiguousarray(cp.broadcast_to(ops, (2 * n_params, *ops.shape[1:])))
@@ -157,15 +159,16 @@ class EstimatorTN:
         operands: list[cp.ndarray],
         pname: str,
         pname2theta: dict[str, float],
-        pname2locs: dict[str, tuple[int, int, Pauli]],
+        pname2locs: dict[str, tuple[list[int], list[int], Pauli]],
         phase_shift: float = np.pi / 2,
     ):
         backups = {}
         try:
             theta = pname2theta[pname]  # e.g. pname = "θ[0]"
-            loc, dag_loc, make_paulis = pname2locs[pname]
-            backups = {loc: operands[loc], dag_loc: operands[dag_loc]}
-            operands[loc], operands[dag_loc] = make_paulis(theta + phase_shift)
+            locs, dag_locs, make_paulis = pname2locs[pname]
+            for loc, dag_loc in zip(locs, dag_locs):
+                backups.update({loc: operands[loc], dag_loc: operands[dag_loc]})
+                operands[loc], operands[dag_loc] = make_paulis(theta + phase_shift)
             yield operands
         finally:
             for i, v in backups.items():

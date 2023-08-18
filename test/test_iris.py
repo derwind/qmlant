@@ -18,9 +18,9 @@ from torch.utils.data import DataLoader, Dataset  # pylint: disable=wrong-import
 from qmlant import optim  # pylint: disable=wrong-import-position
 from qmlant.datasets import Iris  # pylint: disable=wrong-import-position
 from qmlant.models.binary_classification import TTN  # pylint: disable=wrong-import-position
-from qmlant.neural_networks import EstimatorTN  # pylint: disable=wrong-import-position
-from qmlant.neural_networks.utils import (  # pylint: disable=wrong-import-position
-    find_pauli_locs,
+from qmlant.neural_networks import (  # pylint: disable=wrong-import-position
+    EstimatorTN,
+    circuit_to_einsum_expectation,
     replace_by_batch,
     replace_pauli,
 )
@@ -43,7 +43,7 @@ class PQCTrainerTN:  # pylint: disable=too-few-public-methods
         callbacks: list | None = None,
         epochs: int = 1,
     ) -> None:
-        pname2locs, expr, oprands = find_pauli_locs(self.qc_pl, operator, return_tn=True)
+        expr, oprands, pname2locs = circuit_to_einsum_expectation(self.qc_pl, operator)
 
         dataloader = DataLoader(dataset, batch_size, shuffle=True, drop_last=True)
         callbacks = callbacks if callbacks is not None else []
@@ -168,6 +168,7 @@ class TestIrus(unittest.TestCase):
         self.assertLess(elapsed_time, 20)
 
         min_loss = min(loss_list)
+        # test below sometimes failes due to variations
         self.assertLess(min_loss, 0.3)
         self.assertTrue(3.5 < opt_params[0] < 4.5, opt_params[0])
         self.assertTrue(-0.6 < opt_params[1] < -0.5, opt_params[1])
@@ -178,7 +179,7 @@ class TestIrus(unittest.TestCase):
         self.assertTrue(0.5 < opt_params[6] < 1.5, opt_params[6])
 
         params = opt_params
-        pname2locs, expr, operands = find_pauli_locs(placeholder_circuit, hamiltonian, return_tn=True)
+        expr, operands, pname2locs = circuit_to_einsum_expectation(placeholder_circuit, hamiltonian)
         pname2theta = {f"θ[{i}]": params[i] for i in range(len(params))}
 
         testloader = DataLoader(testset, 32)

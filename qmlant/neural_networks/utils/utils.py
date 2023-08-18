@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence, Callable
-from typing import Literal, overload
 
 import cupy as cp
 import numpy as np
@@ -15,35 +14,17 @@ from ..neural_network import Rx_Rxdag, Ry_Rydag, Rz_Rzdag, Rx_Rxdag_Ry_Rydag_Rz_
 Pauli = Callable
 
 
-@overload
-def find_pauli_locs(
-    qc_pl: QuantumCircuit, hamiltonian: str, return_tn: Literal[False]
-) -> dict[str, tuple[int, int, Pauli]]:
-    ...
-
-
-@overload
-def find_pauli_locs(
-    qc_pl: QuantumCircuit, hamiltonian: str, return_tn: Literal[True]
-) -> tuple[dict[str, tuple[int, int, Pauli]], str, list[cp.ndarray]]:
-    ...
-
-
-def find_pauli_locs(
-    qc_pl: QuantumCircuit, hamiltonian: str, return_tn: bool = False
-) -> (
-    dict[str, tuple[int, int, Pauli]]
-    | tuple[dict[str, tuple[int, int, Pauli]], str, list[cp.ndarray]]
-):
-    """find Pauli (whose name are "x[i]", "θ[i]" etc.) locations in the given placeholder circuit
+def circuit_to_einsum_expectation(
+    qc_pl: QuantumCircuit, hamiltonian: str
+) -> tuple[str, list[cp.ndarray], dict[str, tuple[int, int, Pauli]]]:
+    """apply CircuitToEinsum and find Pauli (whose name are "x[i]", "θ[i]" etc.) locations in the given placeholder circuit
 
     Args:
         qc_pl (QuantumCircuit): a given placeholder circuit
         hamiltonian (str): a Hamiltonian
-        return_tn (bool): return a TensorNetwork or not
 
     Returns:
-        dict from parameter names to locations, and a TensorNetwork if return_tn is True
+        a TensorNetwork and dict from parameter names to locations
     """
 
     length = len(qc_pl.parameters)
@@ -79,10 +60,7 @@ def find_pauli_locs(
             if loc and dag_loc:
                 pname2locs[name] = (loc, dag_loc, make_paulis)
                 break
-    if return_tn:
-        return pname2locs, expr, operands
-
-    return pname2locs
+    return expr, operands, pname2locs
 
 
 def replace_by_batch(

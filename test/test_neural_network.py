@@ -8,9 +8,10 @@ import numpy as np  # pylint: disable=wrong-import-position
 from qiskit import QuantumCircuit  # pylint: disable=wrong-import-position
 from qiskit.circuit import ParameterVector  # pylint: disable=wrong-import-position
 
-from qmlant.neural_networks import Ry, Ry_Rydag  # pylint: disable=wrong-import-position
-from qmlant.neural_networks.utils import (  # pylint: disable=wrong-import-position
-    find_pauli_locs,
+from qmlant.neural_networks import (  # pylint: disable=wrong-import-position
+    Ry,
+    Ry_Rydag,
+    circuit_to_einsum_expectation,
     replace_by_batch,
     replace_pauli,
     replace_pauli_phase_shift,
@@ -57,17 +58,13 @@ class TestReplacer(unittest.TestCase):
             dtype=complex,
         )
 
-    def test_find_pauli_locs(self):
+    def test_circuit_to_einsum_expectation(self):
         params = ParameterVector("x", 2)
         qc = QuantumCircuit(2)
         qc.x(0)
         qc.x(1)
         qc.ry(params[0], 0)
         qc.ry(params[1], 1)
-
-        params2locs = find_pauli_locs(qc, "ZZ", return_tn=False)
-        answer = {"x[0]": (3, 10, Ry_Rydag), "x[1]": (5, 8, Ry_Rydag)}
-        self.assertEqual(params2locs, answer)
 
         answer_expr = "a,b,ca,dc,eb,fe,gd,hf,ih,ji,kg,lk,l,j->"
         answer_operands = [
@@ -86,15 +83,16 @@ class TestReplacer(unittest.TestCase):
             self.ZERO,
             self.ZERO,
         ]
+        answer_params2locs = {"x[0]": (3, 10, Ry_Rydag), "x[1]": (5, 8, Ry_Rydag)}
 
-        params2locs, expr, operands = find_pauli_locs(qc, "ZZ", return_tn=True)
-        self.assertEqual(params2locs, answer)
+        expr, operands, params2locs = circuit_to_einsum_expectation(qc, "ZZ")
         self.assertEqual(expr, answer_expr)
         self.assertEqual(len(operands), len(answer_operands))
         for ops, ops_ans in zip(operands, answer_operands):
             if cp.all(ops_ans == self.DUMMY):
                 continue
             self.assertTrue(cp.all(ops == ops_ans))
+        self.assertEqual(params2locs, answer_params2locs)
 
     def test_replace_by_batch(self):
         params = ParameterVector("x", 2)
@@ -104,13 +102,11 @@ class TestReplacer(unittest.TestCase):
         qc.ry(params[0], 0)
         qc.ry(params[1], 1)
 
-        pname2locs = find_pauli_locs(qc, "ZZ", return_tn=False)
-        answer = {"x[0]": (3, 10, Ry_Rydag), "x[1]": (5, 8, Ry_Rydag)}
-        self.assertEqual(pname2locs, answer)
-
         answer_expr = "a,b,ca,dc,eb,fe,gd,hf,ih,ji,kg,lk,l,j->"
-        pname2locs, expr, operands = find_pauli_locs(qc, "ZZ", return_tn=True)
+        answer_pname2locs = {"x[0]": (3, 10, Ry_Rydag), "x[1]": (5, 8, Ry_Rydag)}
+        expr, operands, pname2locs = circuit_to_einsum_expectation(qc, "ZZ")
         self.assertEqual(expr, answer_expr)
+        self.assertEqual(pname2locs, answer_pname2locs)
 
         pname2theta_list = {"x[0]": [np.pi / 6, np.pi / 3], "x[1]": [np.pi / 4, np.pi / 8]}
         expr2, operands2 = replace_by_batch(
@@ -146,12 +142,9 @@ class TestReplacer(unittest.TestCase):
         qc.ry(params[0], 0)
         qc.ry(params[1], 1)
 
-        pname2locs = find_pauli_locs(qc, "ZZ", return_tn=False)
-        answer = {"x[0]": (3, 10, Ry_Rydag), "x[1]": (5, 8, Ry_Rydag)}
-        self.assertEqual(pname2locs, answer)
-
         answer_expr = "a,b,ca,dc,eb,fe,gd,hf,ih,ji,kg,lk,l,j->"
-        pname2locs, expr, operands = find_pauli_locs(qc, "ZZ", return_tn=True)
+        answer_pname2locs = {"x[0]": (3, 10, Ry_Rydag), "x[1]": (5, 8, Ry_Rydag)}
+        expr, operands, pname2locs = circuit_to_einsum_expectation(qc, "ZZ")
         self.assertEqual(expr, answer_expr)
 
         pname2theta_list = {"x[0]": np.pi / 6, "x[1]": np.pi / 4}
@@ -172,6 +165,7 @@ class TestReplacer(unittest.TestCase):
             self.ZERO,
             self.ZERO,
         ]
+        self.assertEqual(pname2locs, answer_pname2locs)
 
         for ops, ops_ans in zip(operands2, answer_operands2):
             self.assertTrue(cp.all(ops == ops_ans))
@@ -184,7 +178,7 @@ class TestReplacer(unittest.TestCase):
         qc.ry(params[0], 0)
         qc.ry(params[1], 1)
 
-        pname2locs, expr, operands = find_pauli_locs(qc, "ZZ", return_tn=True)
+        expr, operands, pname2locs = circuit_to_einsum_expectation(qc, "ZZ")
 
         pname2theta_list = {"x[0]": [np.pi / 6] * 4, "x[1]": [np.pi / 4] * 4}
         _, operands2 = replace_by_batch(

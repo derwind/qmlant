@@ -1,5 +1,5 @@
 from .utils import (
-    find_pauli_locs,
+    circuit_to_einsum_expectation,
     replace_by_batch,
     replace_pauli,
     replace_pauli_phase_shift,

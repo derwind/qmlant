@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Literal, overload
 
 import cupy as cp
 import numpy as np
+
+Pauli = Callable
 
 
 def Rx(theta: float, xp=cp) -> cp.ndarray:

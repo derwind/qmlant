@@ -8,7 +8,7 @@ import cupy as cp
 import numpy as np
 from cuquantum import contract
 
-from .utils import replace_by_batch, replace_pauli, replace_pauli_phase_shift, Pauli
+from .utils import Pauli, replace_by_batch, replace_pauli, replace_pauli_phase_shift
 
 
 class EstimatorTN:

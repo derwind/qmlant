@@ -10,7 +10,7 @@ def ZFeatureMap(
     parameter_prefix: str = "x",
     insert_barriers: bool = False,
     name: str = "ZFeatureMap",
-    parameter_multiplier = 2.0,
+    parameter_multiplier: float = 2.0,
 ) -> QuantumCircuit:
     qc = QuantumCircuit(feature_dimension)
     feature_map = QuantumCircuit(feature_dimension, name=name)

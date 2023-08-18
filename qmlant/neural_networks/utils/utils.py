@@ -26,7 +26,7 @@ def circuit_to_einsum_expectation(
 
     length = len(qc_pl.parameters)
     eps = 0.01
-    params = np.arange(eps, np.pi, (np.pi - eps) / length)
+    params = np.arange(eps, np.pi - eps, (np.pi - 2 * eps) / length)[:length]
     name2param = {pvec.name: p for pvec, p in zip(qc_pl.parameters, params)}
     qc = qc_pl.bind_parameters(params)
     converter = CircuitToEinsum(qc)

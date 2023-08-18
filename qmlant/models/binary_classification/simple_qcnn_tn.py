@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from typing import Literal, overload
 
 import numpy as np
@@ -37,7 +38,7 @@ class SimpleQCNN:
         cls,
         n_qubits: int,
         insert_barrier: bool = False,
-        decompose: bool = False,
+        decompose: bool = True,
         dry_run: bool = False,
     ) -> QuantumCircuit | tuple[int, int]:
         """make a Quantum Convolutional Neural Netowrk circuit
@@ -83,6 +84,37 @@ class SimpleQCNN:
         hamiltonian = list("I" * n_qubits)
         hamiltonian[-1] = "Z"
         return "".join(hamiltonian)
+
+    @classmethod
+    def get_make_pname2theta(
+        cls, n_qubits: int
+    ) -> Callable[[Sequence[float] | np.ndarray], dict[str, float]]:
+        # When layer_width = w,
+        # conv_layer requires: (3 * w) params
+        # pool_layer requires: (3 * w / 2) params
+        def make_pname2theta(params: Sequence[float] | np.ndarray) -> dict[str, float]:
+            pname2theta: dict[str, float] = {}
+
+            layer_width = n_qubits
+            i = 1
+            while layer_width > 1:
+                for j in range(3 * layer_width):
+                    pname = f"c{i}[{j}]"
+                    pname2theta[pname] = params[0]
+                    params = params[1:]
+
+                for j in range(3 * layer_width // 2):
+                    pname = f"p{i}[{j}]"
+                    pname2theta[pname] = params[0]
+                    params = params[1:]
+
+                layer_width = layer_width // 2
+                i += 1
+
+            assert not params
+            return pname2theta
+
+        return make_pname2theta
 
     @classmethod
     def _make_init_circuit(

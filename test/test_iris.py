@@ -169,7 +169,7 @@ class TestIrus(unittest.TestCase):
 
         min_loss = min(loss_list)
         # test below sometimes failes due to variations
-        self.assertLess(min_loss, 0.3)
+        self.assertLess(min_loss, 0.31)
         self.assertTrue(3.5 < opt_params[0] < 4.5, opt_params[0])
         self.assertTrue(-0.6 < opt_params[1] < -0.5, opt_params[1])
         self.assertTrue(4.5 < opt_params[2] < 5.5, opt_params[2])

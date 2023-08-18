@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import contextlib
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import cupy as cp
 import numpy as np
 from cuquantum import contract
 
 from .utils import Pauli, replace_by_batch, replace_pauli, replace_pauli_phase_shift
+
+
+def default_make_pname2theta(params: Sequence[float] | np.ndarray) -> dict[str, float]:
+    return {f"θ[{i}]": params[i] for i in range(len(params))}
 
 
 class EstimatorTN:
@@ -20,10 +24,14 @@ class EstimatorTN:
     """
 
     def __init__(
-        self, pname2locs: dict[str, tuple[list[int], list[int], Pauli]], pname_symbol: str = "θ"
+        self,
+        pname2locs: dict[str, tuple[list[int], list[int], Pauli]],
+        make_pname2theta: Callable[
+            [Sequence[float] | np.ndarray], dict[str, float]
+        ] = default_make_pname2theta,
     ):
         self.pname2locs = pname2locs
-        self.pname_symbol = pname_symbol
+        self.make_pname2theta = make_pname2theta
 
     def prepare_circuit(
         self,
@@ -39,7 +47,7 @@ class EstimatorTN:
         }
         expr, operands = replace_by_batch(expr, operands, pname2theta_list, self.pname2locs)
 
-        pname2theta = {f"{self.pname_symbol}[{i}]": params[i] for i in range(len(params))}
+        pname2theta = self.make_pname2theta(params)
         operands = replace_pauli(operands, pname2theta, self.pname2locs)
 
         return expr, operands
@@ -51,7 +59,7 @@ class EstimatorTN:
         pname2locs: dict[str, set[int]] = {
             pname: set(locs + dag_locs)
             for pname, (locs, dag_locs, _) in self.pname2locs.items()
-            if pname.startswith(self.pname_symbol)  # "θ[i]"
+            if not pname.startswith("x")  # "θ[i]" etc.
         }
         n_params = len(pname2locs)
         param_locs: set[int] = set()
@@ -107,7 +115,7 @@ class EstimatorTN:
 
         expr, operands = self._prepare_backward_circuit(expr, operands)
 
-        pname2theta = {f"{self.pname_symbol}[{i}]": params[i] for i in range(len(params))}
+        pname2theta = self.make_pname2theta(params)
         operands = replace_pauli_phase_shift(operands, pname2theta, self.pname2locs)
         #     p0_p, p0_m, p1_p, p1_m, ...
         # b0  xx    xx    xx    xx
@@ -132,7 +140,7 @@ class EstimatorTN:
             gradient values
         """
 
-        pname2theta = {f"{self.pname_symbol}[{i}]": params[i] for i in range(len(params))}
+        pname2theta = self.make_pname2theta(params)
 
         expval_array = []
         for i in range(len(pname2theta)):

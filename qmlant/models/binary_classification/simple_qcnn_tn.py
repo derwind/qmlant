@@ -16,6 +16,7 @@ class SimpleQCNN:
         cls,
         n_qubits: int,
         insert_barrier: bool = ...,
+        decompose: bool = ...,
         dry_run: Literal[False] = ...,
     ) -> QuantumCircuit:
         ...
@@ -26,6 +27,7 @@ class SimpleQCNN:
         cls,
         n_qubits: int,
         insert_barrier: bool = ...,
+        decompose: bool = ...,
         dry_run: Literal[True] = ...,
     ) -> tuple[int, int]:
         ...
@@ -35,6 +37,7 @@ class SimpleQCNN:
         cls,
         n_qubits: int,
         insert_barrier: bool = False,
+        decompose: bool = False,
         dry_run: bool = False,
     ) -> QuantumCircuit | tuple[int, int]:
         """make a Quantum Convolutional Neural Netowrk circuit
@@ -61,6 +64,8 @@ class SimpleQCNN:
         qc: QuantumCircuit = cls._make_init_circuit(n_qubits, insert_barrier=insert_barrier)
         ansatz = cls._make_ansatz(n_qubits, insert_barrier=insert_barrier)
         qc.compose(ansatz, inplace=True)
+        if decompose:
+            qc = qc.decompose()
 
         return qc
 

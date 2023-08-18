@@ -8,9 +8,11 @@ import numpy as np  # pylint: disable=wrong-import-position
 from qiskit import QuantumCircuit  # pylint: disable=wrong-import-position
 from qiskit.circuit import ParameterVector  # pylint: disable=wrong-import-position
 
+from qmlant.circuit.library import ZFeatureMap  # pylint: disable=wrong-import-position
 from qmlant.neural_networks import (  # pylint: disable=wrong-import-position
     Ry,
     Ry_Rydag,
+    Rz_Rzdag,
     circuit_to_einsum_expectation,
     replace_by_batch,
     replace_pauli,
@@ -46,6 +48,7 @@ class TestReplacer(unittest.TestCase):
     X = cp.array([[0, 1], [1, 0]], dtype=complex)
     Y = cp.array([[0, -1.0j], [1.0j, 0]], dtype=complex)
     Z = cp.array([[1, 0], [0, -1]], dtype=complex)
+    H = cp.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2)
     DUMMY = cp.array([[0, 0], [0, 0]], dtype=complex)
 
     @classmethod
@@ -86,6 +89,60 @@ class TestReplacer(unittest.TestCase):
         answer_params2locs = {"x[0]": ([3], [10], Ry_Rydag), "x[1]": ([5], [8], Ry_Rydag)}
 
         expr, operands, params2locs = circuit_to_einsum_expectation(qc, "ZZ")
+        self.assertEqual(expr, answer_expr)
+        self.assertEqual(len(operands), len(answer_operands))
+        for ops, ops_ans in zip(operands, answer_operands):
+            if cp.all(ops_ans == self.DUMMY):
+                continue
+            self.assertTrue(cp.all(ops == ops_ans))
+        self.assertEqual(params2locs, answer_params2locs)
+
+    def test_circuit_to_einsum_expectation2(self):
+        qc = ZFeatureMap(3, parameter_multiplier=1)
+
+        answer_expr = "a,b,c,da,eb,fc,gd,he,if,jg,kh,li,mj,nk,ol,pm,qn,ro,sr,tq,up,vs,wt,xu,yv,zw,Ax,By,Cz,DA,D,C,B->"
+        answer_operands = [
+            self.ZERO,
+            self.ZERO,
+            self.ZERO,
+            self.H,
+            self.H,
+            self.H,
+            self.DUMMY,
+            self.DUMMY,
+            self.DUMMY,
+            self.H,
+            self.H,
+            self.H,
+            self.DUMMY,
+            self.DUMMY,
+            self.DUMMY,
+            self.Z,
+            self.Z,
+            self.Z,
+            self.DUMMY,
+            self.DUMMY,
+            self.DUMMY,
+            self.H,
+            self.H,
+            self.H,
+            self.DUMMY,
+            self.DUMMY,
+            self.DUMMY,
+            self.H,
+            self.H,
+            self.H,
+            self.ZERO,
+            self.ZERO,
+            self.ZERO,
+        ]
+        answer_params2locs = {
+            "x[0]": ([6, 12], [26, 20], Rz_Rzdag),
+            "x[1]": ([7, 13], [25, 19], Rz_Rzdag),
+            "x[2]": ([8, 14], [24, 18], Rz_Rzdag),
+        }
+
+        expr, operands, params2locs = circuit_to_einsum_expectation(qc, "ZZZ")
         self.assertEqual(expr, answer_expr)
         self.assertEqual(len(operands), len(answer_operands))
         for ops, ops_ans in zip(operands, answer_operands):

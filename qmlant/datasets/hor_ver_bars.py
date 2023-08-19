@@ -15,6 +15,7 @@ class HorVerBars:
     def __init__(
         self,
         train: bool = True,
+        data_size: int = 50,
         test_size: float = 0.3,
         transform: Callable | None = None,
         target_transform: Callable | None = None,
@@ -22,11 +23,12 @@ class HorVerBars:
         self.transform = transform
         self.target_transform = target_transform
         self.train = train
+        self.data_size = data_size
         self.test_size = test_size
         self.data, self.targets = self._load_data()
 
     def _load_data(self) -> tuple[np.ndarray, np.ndarray]:
-        images, labels = generate_dataset(50)
+        images, labels = generate_dataset(self.data_size)
         train_images, test_images, train_labels, test_labels = train_test_split(
             images, labels, test_size=self.test_size
         )

@@ -12,7 +12,7 @@ from .pauli import Pauli, Rx_Rxdag, Rx_Rxdag_Ry_Rydag_Rz_Rzdag, Ry_Rydag, Rz_Rzd
 
 
 def circuit_to_einsum_expectation(
-    qc_pl: QuantumCircuit, hamiltonian: str
+    qc_pl: QuantumCircuit, hamiltonian: str, include_rx: bool = False
 ) -> tuple[str, list[cp.ndarray], dict[str, tuple[list[int], list[int], Pauli]]]:
     """apply CircuitToEinsum and find Pauli (whose name are "x[i]", "θ[i]" etc.) locations in the given placeholder circuit
 
@@ -34,29 +34,38 @@ def circuit_to_einsum_expectation(
 
     pname2locs: dict[str, tuple[list[int], list[int], Pauli]] = {}
     for name, p in name2param.items():
-        rx, rx_dag, ry, ry_dag, rz, rz_dag = Rx_Rxdag_Ry_Rydag_Rz_Rzdag(p)
+        # rx, rx_dag, ry, ry_dag, rz, rz_dag = Rx_Rxdag_Ry_Rydag_Rz_Rzdag(p)
+        rx, _, ry, _, rz, _ = Rx_Rxdag_Ry_Rydag_Rz_Rzdag(p)
         # consider the possibitity of same parameters are encoded in multiple locations
         locs: list[int] = []
         dag_locs: list[int] = []
         make_paulis: Pauli = None
+        len_operands = len(operands)
         for i, t in enumerate(operands):
-            if cp.allclose(t, rx):
+            if i >= len_operands / 2:
+                break
+
+            if cp.allclose(t, ry):
                 locs.append(i)
-                make_paulis = Rx_Rxdag
-            elif cp.allclose(t, rx_dag):
-                dag_locs.append(i)  # i - len(operands)
-            elif cp.allclose(t, ry):
-                locs.append(i)
+                dag_locs.append(len_operands - i - 1)
                 make_paulis = Ry_Rydag
-            elif cp.allclose(t, ry_dag):
-                dag_locs.append(i)  # i - len(operands)
+            # elif cp.allclose(t, ry_dag):
+            #     dag_locs.append(i)  # i - len(operands)
             elif cp.allclose(t, rz):
                 locs.append(i)
+                dag_locs.append(len_operands - i - 1)
                 make_paulis = Rz_Rzdag
-            elif cp.allclose(t, rz_dag):
-                dag_locs.append(i)  # i - len(operands)
+            # elif cp.allclose(t, rz_dag):
+            #     dag_locs.append(i)  # i - len(operands)
+            elif include_rx:
+                if cp.allclose(t, rx):
+                    locs.append(i)
+                    dag_locs.append(len_operands - i - 1)
+                    make_paulis = Rx_Rxdag
+                # elif cp.allclose(t, rx_dag):
+                #     dag_locs.append(i)  # i - len(operands)
         if locs and dag_locs:
-            dag_locs.reverse()
+            # dag_locs.reverse()
             pname2locs[name] = (locs, dag_locs, make_paulis)
     return expr, operands, pname2locs
 

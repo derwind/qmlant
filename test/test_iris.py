@@ -148,7 +148,9 @@ class TestIrus(unittest.TestCase):
 
         n_qubits = 4
 
-        x_length, length = TTN.make_placeholder_circuit(n_qubits, dry_run=True)  # pylint: disable=unpacking-non-sequence
+        x_length, length = TTN.make_placeholder_circuit(  # pylint: disable=unpacking-non-sequence
+            n_qubits, dry_run=True
+        )
         self.assertEqual(x_length, n_qubits)
         self.assertEqual(length, 7)
 

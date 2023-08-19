@@ -3,13 +3,13 @@ import warnings
 
 warnings.simplefilter("ignore", DeprecationWarning)
 
-import cupy as cp  # pylint: disable=wrong-import-position
-import numpy as np  # pylint: disable=wrong-import-position
-from qiskit import QuantumCircuit  # pylint: disable=wrong-import-position
-from qiskit.circuit import ParameterVector  # pylint: disable=wrong-import-position
+import cupy as cp
+import numpy as np
+from qiskit import QuantumCircuit
+from qiskit.circuit import ParameterVector
 
-from qmlant.circuit.library import ZFeatureMap  # pylint: disable=wrong-import-position
-from qmlant.neural_networks import (  # pylint: disable=wrong-import-position
+from qmlant.circuit.library import ZFeatureMap
+from qmlant.neural_networks import (
     Ry,
     Ry_Rydag,
     Rz_Rzdag,

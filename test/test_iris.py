@@ -3,28 +3,28 @@ import warnings
 
 warnings.simplefilter("ignore", DeprecationWarning)
 
-import math  # pylint: disable=wrong-import-position
-import time  # pylint: disable=wrong-import-position
-from collections.abc import Sequence  # pylint: disable=wrong-import-position
+import math
+import time
+from collections.abc import Sequence
 
-import cupy as cp  # pylint: disable=wrong-import-position
-import numpy as np  # pylint: disable=wrong-import-position
-import torch  # pylint: disable=wrong-import-position
-from torchvision import transforms  # pylint: disable=wrong-import-position
-from cuquantum import contract  # pylint: disable=wrong-import-position
-from qiskit import QuantumCircuit  # pylint: disable=wrong-import-position
-from torch.utils.data import DataLoader, Dataset  # pylint: disable=wrong-import-position
+import cupy as cp
+import numpy as np
+import torch
+from torchvision import transforms
+from cuquantum import contract
+from qiskit import QuantumCircuit
+from torch.utils.data import DataLoader, Dataset
 
-from qmlant import optim  # pylint: disable=wrong-import-position
-from qmlant.datasets import Iris  # pylint: disable=wrong-import-position
-from qmlant.models.binary_classification import TTN  # pylint: disable=wrong-import-position
-from qmlant.neural_networks import (  # pylint: disable=wrong-import-position
+from qmlant import optim
+from qmlant.datasets import Iris
+from qmlant.models.binary_classification import TTN
+from qmlant.neural_networks import (
     EstimatorTN,
     circuit_to_einsum_expectation,
     replace_by_batch,
     replace_pauli,
 )
-from qmlant.transforms import MapLabel, ToTensor  # pylint: disable=wrong-import-position
+from qmlant.transforms import MapLabel, ToTensor
 
 
 class PQCTrainerTN:  # pylint: disable=too-few-public-methods

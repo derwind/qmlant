@@ -80,8 +80,7 @@ class EstimatorTN:
 
             # multiplex ansatz params for simultaneous parameter-shift calculations
             backward_ins.append(param_symbol + idx)
-            ops = cp.expand_dims(ops, 0)
-            ops = cp.ascontiguousarray(cp.broadcast_to(ops, (2 * n_params, *ops.shape[1:])))
+            ops = cp.ascontiguousarray(cp.broadcast_to(ops, (2 * n_params, *ops.shape)))
             backward_operands.append(ops)
 
         return ",".join(backward_ins) + "->" + out + param_symbol, backward_operands

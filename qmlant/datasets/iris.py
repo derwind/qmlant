@@ -30,6 +30,32 @@ class Iris:
         self.subclass_targets = subclass_targets
         self.data, self.targets = self._load_data()
 
+    @classmethod
+    def create_train_and_test(
+        cls,
+        test_size: float = 0.0,
+        transform: Callable | None = None,
+        target_transform: Callable | None = None,
+    ) -> tuple[Iris, Iris]:
+        trainset = Iris(transform=transform, target_transform=target_transform)
+        testset = Iris(transform=transform, target_transform=target_transform)
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            trainset.data, trainset.targets, test_size=test_size
+        )
+
+        trainset.data = X_train
+        trainset.targets = y_train
+        trainset.train = True
+        trainset.test_size = test_size
+
+        testset.data = X_test
+        testset.targets = y_test
+        testset.train = True
+        testset.test_size = test_size
+
+        return trainset, testset
+
     def _load_data(self) -> tuple[np.ndarray, np.ndarray]:
         iris = datasets.load_iris()
         if isinstance(iris, tuple):

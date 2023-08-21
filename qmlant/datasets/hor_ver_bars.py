@@ -16,7 +16,7 @@ class HorVerBars:
         self,
         train: bool = True,
         data_size: int = 50,
-        test_size: float = 0.3,
+        test_size: float = 0.0,
         transform: Callable | None = None,
         target_transform: Callable | None = None,
     ) -> None:
@@ -27,11 +27,51 @@ class HorVerBars:
         self.test_size = test_size
         self.data, self.targets = self._load_data()
 
+    @classmethod
+    def create_train_and_test(
+        cls,
+        data_size: int = 50,
+        test_size: float = 0.0,
+        transform: Callable | None = None,
+        target_transform: Callable | None = None,
+    ) -> tuple[HorVerBars, HorVerBars]:
+        trainset = HorVerBars(
+            data_size=data_size, transform=transform, target_transform=target_transform
+        )
+        testset = HorVerBars(data_size=0, transform=transform, target_transform=target_transform)
+
+        train_images, test_images, train_labels, test_labels = train_test_split(
+            trainset.data, trainset.targets, test_size=test_size
+        )
+
+        trainset.data = train_images
+        trainset.targets = train_labels
+        trainset.train = True
+        trainset.data_size = data_size
+        trainset.test_size = test_size
+
+        testset.data = test_images
+        testset.targets = test_labels
+        trainset.train = False
+        testset.data_size = data_size
+        testset.test_size = test_size
+
+        return trainset, testset
+
     def _load_data(self) -> tuple[np.ndarray, np.ndarray]:
         images, labels = generate_dataset(self.data_size)
-        train_images, test_images, train_labels, test_labels = train_test_split(
-            images, labels, test_size=self.test_size
-        )
+        if 0.0 < self.test_size < 1.0:
+            train_images, test_images, train_labels, test_labels = train_test_split(
+                images, labels, test_size=self.test_size
+            )
+        elif self.test_size == 0.0:
+            train_images, train_labels = images, labels
+            test_images, test_labels = None, None
+        elif self.test_size == 1.0:
+            train_images, train_labels = None, None
+            test_images, test_labels = images, labels
+        else:
+            raise ValueError("test_size should be in [0.0, 1.0]")
 
         if self.train:
             return train_images, train_labels

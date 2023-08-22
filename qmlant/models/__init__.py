@@ -1,1 +1,1 @@
-from .binary_classification import TTN, SimpleQCNN
+from .binary_classification import QCNN, TTN, SimpleQCNN

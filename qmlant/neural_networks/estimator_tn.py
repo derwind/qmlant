@@ -15,6 +15,10 @@ def default_make_pname2theta(params: Sequence[float] | np.ndarray) -> dict[str, 
     return {f"θ[{i}]": params[i] for i in range(len(params))}
 
 
+def default_batch_filter(params: np.ndarray) -> np.ndarray:
+    return params  # do nothing
+
+
 class EstimatorTN:
     """A neural network implementation based on the cuTensorNet.
 
@@ -29,9 +33,11 @@ class EstimatorTN:
         make_pname2theta: Callable[
             [Sequence[float] | np.ndarray], dict[str, float]
         ] = default_make_pname2theta,
+        batch_filter: Callable[[np.ndarray], np.ndarray] = default_batch_filter,
     ):
         self.pname2locs = pname2locs
         self.make_pname2theta = make_pname2theta
+        self.batch_filter = batch_filter
 
     def prepare_circuit(
         self,
@@ -43,7 +49,8 @@ class EstimatorTN:
         """prepare a circuit for forward process setting batch and parameters to the circuit."""
 
         pname2theta_list = {
-            f"x[{i}]": batch[:, i].flatten().tolist() for i in range(batch.shape[1])
+            f"x[{i}]": self.batch_filter(batch[:, i]).flatten().tolist()
+            for i in range(batch.shape[1])
         }
         expr, operands = replace_by_batch(expr, operands, pname2theta_list, self.pname2locs)
 

@@ -1,8 +1,11 @@
-.PHONY: default lint mypy black pytest clean
+.PHONY: default lint pylint mypy black pytest clean
 
 default: lint
 
 lint:
+	ruff qmlant
+
+pylint:
 	pylint -rn qmlant
 
 mypy:

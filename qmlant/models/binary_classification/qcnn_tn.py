@@ -186,7 +186,7 @@ class QCNN:
             )
 
             from_qubits, to_qubits = (
-                l.tolist() for l in np.array_split(list(range(layer_width)), 2)
+                qubits.tolist() for qubits in np.array_split(list(range(layer_width)), 2)
             )
 
             ansatz.compose(

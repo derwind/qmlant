@@ -28,6 +28,7 @@ max-line-length = 200
 # McCabe complexity (`C901`) by default.
 select = ["E", "F"]
 ignore = [
+  "E402", # Module level import not at top of file
   "F401", # imported but unused
 ]
 

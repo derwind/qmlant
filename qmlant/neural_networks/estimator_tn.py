@@ -25,21 +25,30 @@ class EstimatorTN:
     Args:
         pname2locs (dict[str, tuple[int, int]]): a dict whose keys are f"θ[{i}]" and values are locations (loc, dag_loc) for Ry(θ±π/2) and Ry(-(θ±π/2)) respectively in `operands`
         pname_symbol (str): the symbol for ansatz portion (default: "θ")
+        expr (str | None): initial `expr` by `CircuitToEinsum`
+        operands (list[cp.ndarray] | None): initial `operands` by `CircuitToEinsum`
+        make_pname2theta (Callable): a function which generates `pname2theta`, e.g. `{"x[0]": 0.23, "x[1]": -0.54, "θ[0]": 1.32}`
+        batch_filter (Callable): a function which converts batch data, e.g. `lambda batch: batch * 2`
     """
 
     def __init__(
         self,
         pname2locs: dict[str, tuple[list[int], list[int], Pauli]],
+        expr: str | None = None,
+        operands: list[cp.ndarray] | None = None,
         make_pname2theta: Callable[
             [Sequence[float] | np.ndarray], dict[str, float]
         ] = default_make_pname2theta,
         batch_filter: Callable[[np.ndarray], np.ndarray] = default_batch_filter,
     ):
         self.pname2locs = pname2locs
+        self.expr = expr
+        self.operands = operands
         self.make_pname2theta = make_pname2theta
         self.batch_filter = batch_filter
+        self._params: Sequence[float] | np.ndarray | None = None  # cache params of forward
 
-    def prepare_circuit(
+    def _prepare_circuit(
         self,
         batch: np.ndarray,
         params: Sequence[float] | np.ndarray,
@@ -52,10 +61,68 @@ class EstimatorTN:
             f"x[{i}]": self.batch_filter(batch[:, i]).flatten().tolist()
             for i in range(batch.shape[1])
         }
+
         expr, operands = replace_by_batch(expr, operands, pname2theta_list, self.pname2locs)
 
         pname2theta = self.make_pname2theta(params)
         operands = replace_pauli(operands, pname2theta, self.pname2locs)
+
+        return expr, operands
+
+    def forward(
+        self,
+        batch: np.ndarray,
+        params: Sequence[float] | np.ndarray,
+    ) -> np.ndarray:
+        """Forward pass of the network.
+
+        Args:
+            batch (np.ndarray): batch data
+            params (Sequence[float] | np.ndarray): parameters for ansatz
+
+        Returns:
+            expectation values
+        """
+
+        self.expr, self.operands = self._prepare_circuit(batch, params, self.expr, self.operands)
+        self._params = params
+        return cp.asnumpy(contract(self.expr, *self.operands).real.reshape(-1, 1))
+
+    def forward_with_tn(
+        self,
+        batch: np.ndarray,
+        params: Sequence[float] | np.ndarray,
+        expr: str,
+        operands: list[cp.ndarray],
+    ) -> tuple[np.ndarray, str, list[cp.ndarray]]:
+        """Forward pass of the network with a Tensor Network (expr and operands).
+
+        Args:
+            batch (np.ndarray): batch data
+            params (Sequence[float] | np.ndarray): parameters for ansatz
+            expr (str): `expr` by `CircuitToEinsum`
+            operands (list[cp.ndarray]): `operands` by `CircuitToEinsum`
+
+        Returns:
+            expectation values, possible updated expr and possible updated operands
+        """
+
+        expr, operands = self._prepare_circuit(batch, params, expr, operands)
+        self._params = params
+        return cp.asnumpy(contract(expr, *operands).real.reshape(-1, 1)), expr, operands
+
+    def _check_expr_and_operands(
+        self, expr: str | None = None, operands: list[cp.ndarray] | None = None
+    ):
+        if expr is None:
+            expr = self.expr
+        if operands is None:
+            operands = self.operands
+
+        if expr is None:
+            raise ValueError("`expr` must not be None.")
+        if operands is None:
+            raise ValueError("`operands` must not be None.")
 
         return expr, operands
 
@@ -92,36 +159,31 @@ class EstimatorTN:
 
         return ",".join(backward_ins) + "->" + out + param_symbol, backward_operands
 
-    def forward(self, expr: str, operands: list[cp.ndarray]) -> np.ndarray:
-        """Forward pass of the network.
-
-        Args:
-            expr (str): `expr` by `CircuitToEinsum`
-            operands (list[cp.ndarray]): `operands` by `CircuitToEinsum`
-
-        Returns:
-            expectation values
-        """
-
-        return cp.asnumpy(contract(expr, *operands).real.reshape(-1, 1))
-
     def backward(
-        self, expr: str, operands: list[cp.ndarray], params: Sequence[float] | np.ndarray
+        self,
+        expr: str | None = None,
+        operands: list[cp.ndarray] | None = None,
     ) -> np.ndarray:
         """Backward pass of the network.
 
         Args:
-            expr (str): `expr` by `CircuitToEinsum`
-            operands (list[cp.ndarray]): `operands` by `CircuitToEinsum`
             params (Sequence[float]): phase params for ansatz portion
+            expr (str | None): `expr` by `CircuitToEinsum`
+            operands (list[cp.ndarray] | None): `operands` by `CircuitToEinsum`
 
         Returns:
             gradient values
         """
 
+        if self._params is None:
+            raise RuntimeError("call forward before backward")
+
+        expr, operands = self._check_expr_and_operands(expr, operands)
         expr, operands = self._prepare_backward_circuit(expr, operands)
 
-        pname2theta = self.make_pname2theta(params)
+        pname2theta = self.make_pname2theta(self._params)
+        self._params = None
+
         operands = replace_pauli_phase_shift(operands, pname2theta, self.pname2locs)
         #     p0_p, p0_m, p1_p, p1_m, ...
         # b0  xx    xx    xx    xx
@@ -133,7 +195,10 @@ class EstimatorTN:
         return expvals[:, range(0, expvals.shape[1], 2)]
 
     def old_backward(
-        self, expr: str, operands: list[cp.ndarray], params: Sequence[float] | np.ndarray
+        self,
+        params: Sequence[float] | np.ndarray,
+        expr: str | None = None,
+        operands: list[cp.ndarray] | None = None,
     ) -> np.ndarray:
         """Backward pass of the network.
 

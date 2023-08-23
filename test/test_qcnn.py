@@ -3,13 +3,9 @@ import warnings
 
 warnings.simplefilter("ignore", DeprecationWarning)
 
-import math
-from collections.abc import Sequence
-
 import cupy as cp
 import numpy as np
-from torchvision import transforms
-from cuquantum import CircuitToEinsum, contract
+from cuquantum import CircuitToEinsum
 from qiskit import QuantumCircuit
 from qiskit.circuit import ParameterVector
 
@@ -18,8 +14,6 @@ from qmlant.neural_networks import (
     Ry_Rydag,
     Rz_Rzdag,
     circuit_to_einsum_expectation,
-    replace_by_batch,
-    replace_pauli,
 )
 
 
@@ -57,7 +51,7 @@ class TestQCNN(unittest.TestCase):
     def test_ansatz2(self):
         ansatz = SimpleQCNN._make_ansatz(2, insert_barrier=True)
         param_len = ansatz.num_parameters
-        params = [p for p in np.arange(0.01, np.pi, np.pi / param_len)][:param_len]
+        params = list(np.arange(0.01, np.pi, np.pi / param_len))[:param_len]
         _, _, params2locs = circuit_to_einsum_expectation(ansatz, "IZ")
         ansatz = ansatz.bind_parameters(params)
         converter = CircuitToEinsum(ansatz)
@@ -153,7 +147,7 @@ class TestQCNN(unittest.TestCase):
 
                 self.assertEqual(ansatz.num_parameters, answer_ansatz.num_parameters)
                 param_len = answer_ansatz.num_parameters
-                params = [p for p in np.arange(0.01, np.pi, np.pi / param_len)][:param_len]
+                params = list(np.arange(0.01, np.pi, np.pi / param_len))[:param_len]
 
                 converter = CircuitToEinsum(ansatz.bind_parameters(params))
                 answer_converter = CircuitToEinsum(answer_ansatz.bind_parameters(params))

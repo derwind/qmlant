@@ -47,6 +47,7 @@ class EstimatorTN:
         self.make_pname2theta = make_pname2theta
         self.batch_filter = batch_filter
         self._params: Sequence[float] | np.ndarray | None = None  # cache params of forward
+        self._last_forward: np.ndarray | None = None  # cache expvals of forward
 
     def _prepare_circuit(
         self,
@@ -86,7 +87,8 @@ class EstimatorTN:
 
         self.expr, self.operands = self._prepare_circuit(batch, params, self.expr, self.operands)
         self._params = params
-        return cp.asnumpy(contract(self.expr, *self.operands).real.reshape(-1, 1))
+        self._last_forward = cp.asnumpy(contract(self.expr, *self.operands).real.reshape(-1, 1))
+        return self._last_forward
 
     def forward_with_tn(
         self,
@@ -109,7 +111,8 @@ class EstimatorTN:
 
         expr, operands = self._prepare_circuit(batch, params, expr, operands)
         self._params = params
-        return cp.asnumpy(contract(expr, *operands).real.reshape(-1, 1)), expr, operands
+        self._last_forward = cp.asnumpy(contract(expr, *operands).real.reshape(-1, 1))
+        return self._last_forward, expr, operands
 
     def _check_expr_and_operands(
         self, expr: str | None = None, operands: list[cp.ndarray] | None = None
@@ -125,6 +128,11 @@ class EstimatorTN:
             raise ValueError("`operands` must not be None.")
 
         return expr, operands
+
+    def pop_last_forward(self) -> np.ndarray:
+        last_forward = self._last_forward
+        self._last_forward = None
+        return last_forward
 
     def _prepare_backward_circuit(
         self, forward_expr: str, forward_operands: list[cp.ndarray], param_symbol: str = "孕"
@@ -154,8 +162,8 @@ class EstimatorTN:
 
             # multiplex ansatz params for simultaneous parameter-shift calculations
             backward_ins.append(param_symbol + idx)
-            ops = cp.ascontiguousarray(cp.broadcast_to(ops, (2 * n_params, *ops.shape)))
-            backward_operands.append(ops)
+            ops_ = cp.ascontiguousarray(cp.broadcast_to(ops, (2 * n_params, *ops.shape)))
+            backward_operands.append(ops_)
 
         return ",".join(backward_ins) + "->" + out + param_symbol, backward_operands
 

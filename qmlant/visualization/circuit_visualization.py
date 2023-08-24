@@ -77,8 +77,8 @@ def get_quimb_tn(
             hamiltonian = [hamiltonian]
 
         for operator in hamiltonian:
-            for i, op in enumerate(operator):
-                op = op.upper()
+            for i, op_ in enumerate(operator):
+                op = op_.upper()
                 if op == "I":
                     continue
 

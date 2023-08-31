@@ -67,7 +67,8 @@ def get_quimb_tn(
 ) -> qtn.Circuit:
     if assign_dummy_parameters:
         state = circuit.bind_parameters([0] * len(circuit.parameters))
-
+    else:
+        state = circuit
     qc = state.copy()
 
     if hamiltonian is not None:

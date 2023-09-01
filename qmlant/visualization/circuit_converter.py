@@ -26,6 +26,7 @@ def circuit_to_quimb_tn(qc: QuantumCircuit) -> qtn.Circuit | None:
         strict=False,
     )
 
+    # https://github.com/Qiskit/qiskit/blob/main/qiskit/qasm2/parse.py
     gates = []
     has_u, has_cx = False, False
     for custom in custom_instructions:
@@ -52,6 +53,7 @@ def circuit_to_quimb_tn(qc: QuantumCircuit) -> qtn.Circuit | None:
             gate_id, parameters, op_qubits = op.operands
             gate = gates[gate_id]
 
+            # https://github.com/jcmgray/quimb/blob/main/quimb/tensor/circuit.py
             if gate == lib.standard_gates.HGate:
                 circuit.apply_gate("H", *op_qubits)
             elif gate == lib.standard_gates.IGate:
@@ -84,6 +86,8 @@ def circuit_to_quimb_tn(qc: QuantumCircuit) -> qtn.Circuit | None:
                 circuit.apply_gate("CY", *op_qubits)
             elif gate == lib.standard_gates.CZGate:
                 circuit.apply_gate("CZ", *op_qubits)
+            elif gate == lib.standard_gates.RZZGate:
+                circuit.apply_gate("RZZ", *parameters, *op_qubits)
             else:
                 print(f"Not implemented for a gate: {gate}")
         elif opcode == OpCode.ConditionedGate:

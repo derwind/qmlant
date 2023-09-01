@@ -106,6 +106,9 @@ def replace_pauli(
     pname2locs: dict[str, tuple[list[int], list[int], Pauli]],
 ) -> list[cp.ndarray]:
     for pname, theta in pname2theta.items():  # e.g. pname[0] = "θ[0]"
+        # pname may be not found due to cancellation between op and op_dagger
+        if pname not in pname2locs:
+            continue
         locs, dag_locs, make_paulis = pname2locs[pname]
         for loc, dag_loc in zip(locs, dag_locs):
             make_paulis(theta, operands[loc], operands[dag_loc])

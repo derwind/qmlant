@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 import networkx as nx
+import numpy as np
 import quimb.tensor as qtn
 from cuquantum import CircuitToEinsum
 from qiskit import QuantumCircuit
@@ -66,7 +67,10 @@ def get_quimb_tn(
     assign_dummy_parameters: bool = False,
 ) -> qtn.Circuit:
     if assign_dummy_parameters:
-        state = circuit.bind_parameters([0] * len(circuit.parameters))
+        length = len(circuit.parameters)
+        eps = 0.01
+        params = np.arange(eps, np.pi - eps, (np.pi - 2 * eps) / length)[:length]
+        state = circuit.bind_parameters(params)
     else:
         state = circuit
     qc = state.copy()

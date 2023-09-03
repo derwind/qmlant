@@ -39,7 +39,7 @@ def Rz(theta: float, xp=cp) -> cp.ndarray:
 @overload
 def Rx_Rxdag(  # type: ignore
     theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
-) -> tuple[np.ndarray | cp.ndarray, np.ndarray | cp.ndarray]:
+) -> tuple[np.ndarray, np.ndarray ] | tuple[cp.ndarray, cp.ndarray]:
     ...
 
 
@@ -69,7 +69,7 @@ def Rx_Rxdag(
 @overload
 def Ry_Rydag(  # type: ignore
     theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
-) -> tuple[np.ndarray | cp.ndarray, np.ndarray | cp.ndarray]:
+) -> tuple[np.ndarray, np.ndarray ] | tuple[cp.ndarray, cp.ndarray]:
     ...
 
 
@@ -99,7 +99,7 @@ def Ry_Rydag(
 @overload
 def Rz_Rzdag(  # type: ignore
     theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
-) -> tuple[np.ndarray | cp.ndarray, np.ndarray | cp.ndarray]:
+) -> tuple[np.ndarray, np.ndarray ] | tuple[cp.ndarray, cp.ndarray]:
     ...
 
 
@@ -126,6 +126,45 @@ def Rz_Rzdag(
     mat[0][0] = mat_dag[1][1] = cos - sin * 1.0j
     mat_dag[0][0] = mat[1][1] = cos + sin * 1.0j
     mat[0][1] = mat[1][0] = mat_dag[0][1] = mat_dag[1][0] = 0
+    return None
+
+
+@overload
+def Rzz_Rzzdag(  # type: ignore
+    theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
+) -> tuple[np.ndarray, np.ndarray ] | tuple[cp.ndarray, cp.ndarray]:
+    ...
+
+
+@overload
+def Rzz_Rzzdag(theta: float, mat: cp.ndarray = ..., mat_dag: cp.ndarray = ..., xp=...) -> None:
+    ...
+
+
+def Rzz_Rzzdag(
+    theta: float, mat: cp.ndarray | None = None, mat_dag: cp.ndarray | None = None, xp=cp
+) -> tuple[np.ndarray | cp.ndarray, np.ndarray | cp.ndarray] | None:
+    cos = np.cos(theta / 2)
+    sin = np.sin(theta / 2)
+    if mat is None or mat_dag is None:
+        rzz_rzzdag = xp.array(
+            [
+                [
+                    [[[cos - sin * 1j, 0], [0, 0]], [[0, cos + sin * 1j], [0, 0]]],
+                    [[[0, 0], [cos + sin * 1j, 0]], [[0, 0], [0, cos - sin * 1j]]],
+                ],
+                [
+                    [[[cos + sin * 1j, 0], [0, 0]], [[0, cos - sin * 1j], [0, 0]]],
+                    [[[0, 0], [cos - sin * 1j, 0]], [[0, 0], [0, cos + sin * 1j]]],
+                ],
+            ],
+            dtype=complex,
+        )
+        return rzz_rzzdag[0], rzz_rzzdag[1]
+
+    mat[0][0][0][0] = mat[1][1][1][1] = mat_dag[0][1][0][1] = mat_dag[1][0][1][0] = cos - sin * 1.0j
+    mat[0][1][0][1] = mat[1][0][1][0] = mat_dag[0][0][0][0] = mat_dag[1][1][1][1] = cos + sin * 1.0j
+    mat[0][0][0][1] = mat[0][0][1][0] = mat[0][0][1][1] = mat[0][1][0][0] = mat[0][1][1][0] = mat[0][1][1][1] = mat[1][0][0][0] = mat[1][0][0][1] = mat[1][0][1][1] = mat[1][1][0][0] = mat[1][1][0][1] = mat[1][1][1][0] = mat_dag[0][0][0][1] = mat_dag[0][0][1][0] = mat_dag[0][0][1][1] = mat_dag[0][1][0][0] = mat_dag[0][1][1][0] = mat_dag[0][1][1][1] = mat_dag[1][0][0][0] = mat_dag[1][0][0][1] = mat_dag[1][0][1][1] = mat_dag[1][1][0][0] = mat_dag[1][1][0][1] = mat_dag[1][1][1][0] = 0
     return None
 
 

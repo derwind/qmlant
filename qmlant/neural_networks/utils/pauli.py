@@ -39,7 +39,7 @@ def Rz(theta: float, xp=cp) -> cp.ndarray:
 @overload
 def Rx_Rxdag(  # type: ignore
     theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
-) -> tuple[np.ndarray, np.ndarray ] | tuple[cp.ndarray, cp.ndarray]:
+) -> tuple[np.ndarray, np.ndarray] | tuple[cp.ndarray, cp.ndarray]:
     ...
 
 
@@ -69,7 +69,7 @@ def Rx_Rxdag(
 @overload
 def Ry_Rydag(  # type: ignore
     theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
-) -> tuple[np.ndarray, np.ndarray ] | tuple[cp.ndarray, cp.ndarray]:
+) -> tuple[np.ndarray, np.ndarray] | tuple[cp.ndarray, cp.ndarray]:
     ...
 
 
@@ -99,7 +99,7 @@ def Ry_Rydag(
 @overload
 def Rz_Rzdag(  # type: ignore
     theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
-) -> tuple[np.ndarray, np.ndarray ] | tuple[cp.ndarray, cp.ndarray]:
+) -> tuple[np.ndarray, np.ndarray] | tuple[cp.ndarray, cp.ndarray]:
     ...
 
 
@@ -132,7 +132,7 @@ def Rz_Rzdag(
 @overload
 def Rzz_Rzzdag(  # type: ignore
     theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
-) -> tuple[np.ndarray, np.ndarray ] | tuple[cp.ndarray, cp.ndarray]:
+) -> tuple[np.ndarray, np.ndarray] | tuple[cp.ndarray, cp.ndarray]:
     ...
 
 
@@ -164,7 +164,11 @@ def Rzz_Rzzdag(
 
     mat[0][0][0][0] = mat[1][1][1][1] = mat_dag[0][1][0][1] = mat_dag[1][0][1][0] = cos - sin * 1.0j
     mat[0][1][0][1] = mat[1][0][1][0] = mat_dag[0][0][0][0] = mat_dag[1][1][1][1] = cos + sin * 1.0j
-    mat[0][0][0][1] = mat[0][0][1][0] = mat[0][0][1][1] = mat[0][1][0][0] = mat[0][1][1][0] = mat[0][1][1][1] = mat[1][0][0][0] = mat[1][0][0][1] = mat[1][0][1][1] = mat[1][1][0][0] = mat[1][1][0][1] = mat[1][1][1][0] = mat_dag[0][0][0][1] = mat_dag[0][0][1][0] = mat_dag[0][0][1][1] = mat_dag[0][1][0][0] = mat_dag[0][1][1][0] = mat_dag[0][1][1][1] = mat_dag[1][0][0][0] = mat_dag[1][0][0][1] = mat_dag[1][0][1][1] = mat_dag[1][1][0][0] = mat_dag[1][1][0][1] = mat_dag[1][1][1][0] = 0
+    mat[0][0][0][1] = mat[0][0][1][0] = mat[0][0][1][1] = mat[0][1][0][0] = mat[0][1][1][0] = \
+    mat[0][1][1][1] = mat[1][0][0][0] = mat[1][0][0][1] = mat[1][0][1][1] = mat[1][1][0][0] = \
+    mat[1][1][0][1] = mat[1][1][1][0] = mat_dag[0][0][0][1] = mat_dag[0][0][1][0] = mat_dag[0][0][1][1] = \
+    mat_dag[0][1][0][0] = mat_dag[0][1][1][0] = mat_dag[0][1][1][1] = mat_dag[1][0][0][0] = mat_dag[1][0][0][1] = \
+    mat_dag[1][0][1][1] = mat_dag[1][1][0][0] = mat_dag[1][1][0][1] = mat_dag[1][1][1][0] = 0
     return None
 
 

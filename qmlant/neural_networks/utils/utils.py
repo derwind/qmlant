@@ -8,7 +8,14 @@ import numpy as np
 from cuquantum import CircuitToEinsum
 from qiskit import QuantumCircuit
 
-from .pauli import Pauli, Rx_Rxdag, Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag, Ry_Rydag, Rz_Rzdag, Rzz_Rzzdag
+from .pauli import (
+    Pauli,
+    Rx_Rxdag,
+    Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag,
+    Ry_Rydag,
+    Rz_Rzdag,
+    Rzz_Rzzdag,
+)
 
 
 def circuit_to_einsum_expectation(

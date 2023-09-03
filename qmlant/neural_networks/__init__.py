@@ -3,7 +3,7 @@ from .utils import (
     Pauli,
     Rx,
     Rx_Rxdag,
-    Rx_Rxdag_Ry_Rydag_Rz_Rzdag,
+    Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag,
     Ry,
     Ry_Rydag,
     Rz,

@@ -129,16 +129,30 @@ def Rz_Rzdag(
     return None
 
 
-def Rx_Rxdag_Ry_Rydag_Rz_Rzdag(
+def Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag(
     theta: float, xp=cp
-) -> tuple[
-    np.ndarray | cp.ndarray,
-    np.ndarray | cp.ndarray,
-    np.ndarray | cp.ndarray,
-    np.ndarray | cp.ndarray,
-    np.ndarray | cp.ndarray,
-    np.ndarray | cp.ndarray,
-]:
+) -> (
+    tuple[
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+    ]
+    | tuple[
+        cp.ndarray,
+        cp.ndarray,
+        cp.ndarray,
+        cp.ndarray,
+        cp.ndarray,
+        cp.ndarray,
+        cp.ndarray,
+        cp.ndarray,
+    ]
+):
     cos = np.cos(theta / 2)
     sin = np.sin(theta / 2)
 
@@ -159,4 +173,27 @@ def Rx_Rxdag_Ry_Rydag_Rz_Rzdag(
         ],
         dtype=complex,
     )
-    return rx_rxdag[0], rx_rxdag[1], ry_rydag[0], ry_rydag[1], rz_rzdag[0], rz_rzdag[1]
+
+    rzz_rzzdag = xp.array(
+        [
+            [
+                [[[cos - sin * 1j, 0], [0, 0]], [[0, cos + sin * 1j], [0, 0]]],
+                [[[0, 0], [cos + sin * 1j, 0]], [[0, 0], [0, cos - sin * 1j]]],
+            ],
+            [
+                [[[cos + sin * 1j, 0], [0, 0]], [[0, cos - sin * 1j], [0, 0]]],
+                [[[0, 0], [cos - sin * 1j, 0]], [[0, 0], [0, cos + sin * 1j]]],
+            ],
+        ],
+        dtype=complex,
+    )
+    return (
+        rx_rxdag[0],
+        rx_rxdag[1],
+        ry_rydag[0],
+        ry_rydag[1],
+        rz_rzdag[0],
+        rz_rzdag[1],
+        rzz_rzzdag[0],
+        rzz_rzzdag[1],
+    )

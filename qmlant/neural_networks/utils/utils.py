@@ -8,7 +8,7 @@ import numpy as np
 from cuquantum import CircuitToEinsum
 from qiskit import QuantumCircuit
 
-from .pauli import Pauli, Rx_Rxdag, Rx_Rxdag_Ry_Rydag_Rz_Rzdag, Ry_Rydag, Rz_Rzdag
+from .pauli import Pauli, Rx_Rxdag, Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag, Ry_Rydag, Rz_Rzdag
 
 
 def circuit_to_einsum_expectation(
@@ -34,8 +34,8 @@ def circuit_to_einsum_expectation(
 
     pname2locs: dict[str, tuple[list[int], list[int], Pauli]] = {}
     for name, p in name2param.items():
-        # rx, rx_dag, ry, ry_dag, rz, rz_dag = Rx_Rxdag_Ry_Rydag_Rz_Rzdag(p)
-        rx, _, ry, _, rz, _ = Rx_Rxdag_Ry_Rydag_Rz_Rzdag(p)
+        # rx, rx_dag, ry, ry_dag, rz, rz_dag = Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag(p)
+        rx, _, ry, _, rz, _, _, _ = Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag(p)
         # consider the possibitity of same parameters are encoded in multiple locations
         locs: list[int] = []
         dag_locs: list[int] = []

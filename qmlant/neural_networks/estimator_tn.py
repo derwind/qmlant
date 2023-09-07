@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import re
 from collections.abc import Callable, Sequence
 
@@ -51,19 +50,20 @@ class EstimatorTN:
 
     def _prepare_circuit(
         self,
-        batch: np.ndarray,
         params: Sequence[float] | np.ndarray,
         expr: str,
         operands: list[cp.ndarray],
+        batch: np.ndarray | None,
     ) -> tuple[str, list[cp.ndarray]]:
         """prepare a circuit for forward process setting batch and parameters to the circuit."""
 
-        pname2theta_list = {
-            f"x[{i}]": self.batch_filter(batch[:, i]).flatten().tolist()
-            for i in range(batch.shape[1])
-        }
+        if batch is not None:
+            pname2theta_list = {
+                f"x[{i}]": self.batch_filter(batch[:, i]).flatten().tolist()
+                for i in range(batch.shape[1])
+            }
 
-        expr, operands = replace_by_batch(expr, operands, pname2theta_list, self.pname2locs)
+            expr, operands = replace_by_batch(expr, operands, pname2theta_list, self.pname2locs)
 
         pname2theta = self.make_pname2theta(params)
         operands = replace_pauli(operands, pname2theta, self.pname2locs)
@@ -72,44 +72,44 @@ class EstimatorTN:
 
     def forward(
         self,
-        batch: np.ndarray,
         params: Sequence[float] | np.ndarray,
+        batch: np.ndarray | None,
     ) -> np.ndarray:
         """Forward pass of the network.
 
         Args:
-            batch (np.ndarray): batch data
             params (Sequence[float] | np.ndarray): parameters for ansatz
+            batch (np.ndarray | None): batch data
 
         Returns:
             expectation values
         """
 
-        self.expr, self.operands = self._prepare_circuit(batch, params, self.expr, self.operands)
+        self.expr, self.operands = self._prepare_circuit(params, self.expr, self.operands, batch)
         self._params = params
         self._last_forward = cp.asnumpy(contract(self.expr, *self.operands).real.reshape(-1, 1))
         return self._last_forward
 
     def forward_with_tn(
         self,
-        batch: np.ndarray,
         params: Sequence[float] | np.ndarray,
         expr: str,
         operands: list[cp.ndarray],
+        batch: np.ndarray | None,
     ) -> tuple[np.ndarray, str, list[cp.ndarray]]:
         """Forward pass of the network with a Tensor Network (expr and operands).
 
         Args:
-            batch (np.ndarray): batch data
             params (Sequence[float] | np.ndarray): parameters for ansatz
             expr (str): `expr` by `CircuitToEinsum`
             operands (list[cp.ndarray]): `operands` by `CircuitToEinsum`
+            batch (np.ndarray): batch data
 
         Returns:
             expectation values, possible updated expr and possible updated operands
         """
 
-        expr, operands = self._prepare_circuit(batch, params, expr, operands)
+        expr, operands = self._prepare_circuit(params, expr, operands, batch)
         self._params = params
         self._last_forward = cp.asnumpy(contract(expr, *operands).real.reshape(-1, 1))
         return self._last_forward, expr, operands
@@ -201,62 +201,3 @@ class EstimatorTN:
         for i in range(0, expvals.shape[1], 2):
             expvals[:, i] = (expvals[:, i] - expvals[:, i + 1]) / 2
         return expvals[:, range(0, expvals.shape[1], 2)]
-
-    def old_backward(
-        self,
-        params: Sequence[float] | np.ndarray,
-        expr: str | None = None,
-        operands: list[cp.ndarray] | None = None,
-    ) -> np.ndarray:
-        """Backward pass of the network.
-
-        Args:
-            expr (str): `expr` by `CircuitToEinsum`
-            operands (list[cp.ndarray]): `operands` by `CircuitToEinsum`
-            params (Sequence[float]): phase params for ansatz portion
-
-        Returns:
-            gradient values
-        """
-
-        pname2theta = self.make_pname2theta(params)
-
-        expval_array = []
-        for i in range(len(pname2theta)):
-            pname = f"θ[{i}]"
-            # per batch
-            with self.temporarily_replace_pauli(
-                operands, pname, pname2theta, self.pname2locs, np.pi / 2
-            ):
-                expvals_p = cp.asnumpy(contract(expr, *operands).real.flatten())
-            with self.temporarily_replace_pauli(
-                operands, pname, pname2theta, self.pname2locs, -np.pi / 2
-            ):
-                expvals_m = cp.asnumpy(contract(expr, *operands).real.flatten())
-            expvals = (expvals_p - expvals_m) / 2
-            expval_array.append(expvals)
-
-        # batch grads_i is converted to a column vector
-        return np.array(expval_array).T
-
-    @classmethod
-    @contextlib.contextmanager
-    def temporarily_replace_pauli(
-        cls,
-        operands: list[cp.ndarray],
-        pname: str,
-        pname2theta: dict[str, float],
-        pname2locs: dict[str, tuple[list[int], list[int], Pauli]],
-        phase_shift: float = np.pi / 2,
-    ):
-        backups = {}
-        try:
-            theta = pname2theta[pname]  # e.g. pname = "θ[0]"
-            locs, dag_locs, make_paulis = pname2locs[pname]
-            for loc, dag_loc in zip(locs, dag_locs):
-                backups.update({loc: operands[loc], dag_loc: operands[dag_loc]})
-                operands[loc], operands[dag_loc] = make_paulis(theta + phase_shift)
-            yield operands
-        finally:
-            for i, v in backups.items():
-                operands[i] = v

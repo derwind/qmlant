@@ -1,5 +1,6 @@
 [tool.black]
 line-length = 100
+exclude = 'qmlant/neural_networks/utils/pauli.py'
 target-version = ['py38', 'py39', 'py310', 'py311']
 
 [tool.pylint.messages_control]

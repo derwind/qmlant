@@ -60,7 +60,7 @@ class PQCTrainerTN:  # pylint: disable=too-few-public-methods
                 label = label.reshape(label.shape[0], -1)
 
                 # "forward"
-                expvals, expr, oprands = qnn.forward_with_tn(batch, params, expr, oprands)
+                expvals, expr, oprands = qnn.forward_with_tn(params, expr, oprands, batch)
                 total_loss = np.mean((expvals - label) ** 2)
 
                 # "backward"
@@ -112,7 +112,7 @@ class PQCTrainerTN2(PQCTrainerTN):  # pylint: disable=too-few-public-methods
                 label = label.reshape(label.shape[0], -1)
 
                 # "forward"
-                expvals = qnn.forward(batch, params)
+                expvals = qnn.forward(params, batch)
                 total_loss = np.mean((expvals - label) ** 2)
 
                 # "backward"

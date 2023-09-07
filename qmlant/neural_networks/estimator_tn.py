@@ -35,6 +35,7 @@ class EstimatorTN:
         pname2locs: dict[str, tuple[list[int], list[int], Pauli]],
         expr: str | None = None,
         operands: list[cp.ndarray] | None = None,
+        coefficients: np.ndarray | None = None,
         make_pname2theta: Callable[
             [Sequence[float] | np.ndarray], dict[str, float]
         ] = default_make_pname2theta,
@@ -43,6 +44,7 @@ class EstimatorTN:
         self.pname2locs = pname2locs
         self.expr = expr
         self.operands = operands
+        self.coefficients = coefficients
         self.make_pname2theta = make_pname2theta
         self.batch_filter = batch_filter
         self._params: Sequence[float] | np.ndarray | None = None  # cache params of forward
@@ -73,7 +75,7 @@ class EstimatorTN:
     def forward(
         self,
         params: Sequence[float] | np.ndarray,
-        batch: np.ndarray | None,
+        batch: np.ndarray | None = None,
     ) -> np.ndarray:
         """Forward pass of the network.
 
@@ -88,6 +90,8 @@ class EstimatorTN:
         self.expr, self.operands = self._prepare_circuit(params, self.expr, self.operands, batch)
         self._params = params
         self._last_forward = cp.asnumpy(contract(self.expr, *self.operands).real.reshape(-1, 1))
+        if self.coefficients is not None:
+            self._last_forward = np.sum(self._last_forward * self.coefficients.reshape(-1, 1))
         return self._last_forward
 
     def forward_with_tn(
@@ -95,7 +99,7 @@ class EstimatorTN:
         params: Sequence[float] | np.ndarray,
         expr: str,
         operands: list[cp.ndarray],
-        batch: np.ndarray | None,
+        batch: np.ndarray | None = None,
     ) -> tuple[np.ndarray, str, list[cp.ndarray]]:
         """Forward pass of the network with a Tensor Network (expr and operands).
 
@@ -112,6 +116,8 @@ class EstimatorTN:
         expr, operands = self._prepare_circuit(params, expr, operands, batch)
         self._params = params
         self._last_forward = cp.asnumpy(contract(expr, *operands).real.reshape(-1, 1))
+        if self.coefficients is not None:
+            self._last_forward = np.sum(self._last_forward * self.coefficients.reshape(-1, 1))
         return self._last_forward, expr, operands
 
     def _check_expr_and_operands(
@@ -191,6 +197,8 @@ class EstimatorTN:
 
         pname2theta = self.make_pname2theta(self._params)
         self._params = None
+
+        # currently ignore self.coefficients...
 
         operands = replace_pauli_phase_shift(operands, pname2theta, self.pname2locs)
         #     p0_p, p0_m, p1_p, p1_m, ...

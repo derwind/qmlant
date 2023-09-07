@@ -1,5 +1,9 @@
 from .pauli import (
+    Identity,
     Pauli,
+    PauliX,
+    PauliY,
+    PauliZ,
     Rx,
     Rx_Rxdag,
     Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag,

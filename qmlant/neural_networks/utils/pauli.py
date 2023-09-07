@@ -9,7 +9,32 @@ import numpy as np
 Pauli = Callable
 
 
-def Rx(theta: float, xp=cp) -> cp.ndarray:
+def Identity(xp=cp) -> np.ndarray | cp.ndarray:
+    return xp.eye(2, dtype=complex)
+
+
+def PauliX(xp=cp) -> np.ndarray | cp.ndarray:
+    return xp.array(
+        [[0, 1], [1, 0]],
+        dtype=complex,
+    )
+
+
+def PauliY(xp=cp) -> np.ndarray | cp.ndarray:
+    return xp.array(
+        [[0, -1j], [1j, 0]],
+        dtype=complex,
+    )
+
+
+def PauliZ(xp=cp) -> np.ndarray | cp.ndarray:
+    return xp.array(
+        [[1, 0], [0, -1]],
+        dtype=complex,
+    )
+
+
+def Rx(theta: float, xp=cp) -> np.ndarray | cp.ndarray:
     cos = np.cos(theta / 2)
     sin = np.sin(theta / 2)
     return xp.array(
@@ -18,7 +43,7 @@ def Rx(theta: float, xp=cp) -> cp.ndarray:
     )
 
 
-def Ry(theta: float, xp=cp) -> cp.ndarray:
+def Ry(theta: float, xp=cp) -> np.ndarray | cp.ndarray:
     cos = np.cos(theta / 2)
     sin = np.sin(theta / 2)
     return xp.array(
@@ -27,7 +52,7 @@ def Ry(theta: float, xp=cp) -> cp.ndarray:
     )
 
 
-def Rz(theta: float, xp=cp) -> cp.ndarray:
+def Rz(theta: float, xp=cp) -> np.ndarray | cp.ndarray:
     cos = np.cos(theta / 2)
     sin = np.sin(theta / 2)
     return xp.array(

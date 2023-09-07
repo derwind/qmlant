@@ -91,7 +91,9 @@ class EstimatorTN:
         self._params = params
         self._last_forward = cp.asnumpy(contract(self.expr, *self.operands).real.reshape(-1, 1))
         if self.coefficients is not None:
-            self._last_forward = np.sum(self._last_forward * self.coefficients.reshape(-1, 1))
+            self._last_forward = self._last_forward * self.coefficients.reshape(-1, 1)
+            if batch is None:
+                self._last_forward = np.sum(self._last_forward)
         return self._last_forward
 
     def forward_with_tn(
@@ -107,7 +109,7 @@ class EstimatorTN:
             params (Sequence[float] | np.ndarray): parameters for ansatz
             expr (str): `expr` by `CircuitToEinsum`
             operands (list[cp.ndarray]): `operands` by `CircuitToEinsum`
-            batch (np.ndarray): batch data
+            batch (np.ndarray | None): batch data
 
         Returns:
             expectation values, possible updated expr and possible updated operands
@@ -117,7 +119,9 @@ class EstimatorTN:
         self._params = params
         self._last_forward = cp.asnumpy(contract(expr, *operands).real.reshape(-1, 1))
         if self.coefficients is not None:
-            self._last_forward = np.sum(self._last_forward * self.coefficients.reshape(-1, 1))
+            self._last_forward = self._last_forward * self.coefficients.reshape(-1, 1)
+            if batch is None:
+                self._last_forward = np.sum(self._last_forward)
         return self._last_forward, expr, operands
 
     def _check_expr_and_operands(

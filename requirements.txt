@@ -5,4 +5,3 @@ networkx
 scikit-learn
 torch
 numpy
-Pillow

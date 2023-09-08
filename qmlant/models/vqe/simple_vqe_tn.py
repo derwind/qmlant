@@ -6,7 +6,7 @@ from qiskit import QuantumCircuit
 from qiskit.circuit import ParameterVector
 
 
-class VQE:
+class SimpleVQE:
     @overload
     @classmethod
     def make_placeholder_circuit(

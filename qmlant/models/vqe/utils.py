@@ -65,7 +65,7 @@ class HamiltonianConverter:
         self._ising_dict = ising_dict
         self.num_qubits = _calc_num_qubits(ising_dict)
 
-    def get_hamiltonian(self) -> tuple[list[cp.array], np.ndarray]:
+    def get_hamiltonian(self) -> tuple[list[cp.ndarray], np.ndarray]:
         """get Hamiltonian array and coefficients for `a_{12} Z_1 Z_2 + a_{34} Z_3 Z_4` etc.
 
         Returns:
@@ -76,7 +76,7 @@ class HamiltonianConverter:
         I = Identity(xp=cp)  # noqa: E741
         Z = PauliZ(xp=cp)
 
-        hamiltonian: list[cp.array] = []
+        hamiltonian: list[cp.ndarray] = []
         for i in range(self.num_qubits):
             row = []
             for k in self._ising_dict.keys():
@@ -101,7 +101,7 @@ class HamiltonianConverter:
 
 
 def circuit_to_einsum_expectation(
-    qc_pl: QuantumCircuit, hamiltonian: list[cp.array], coefficients: np.ndarray | None = None
+    qc_pl: QuantumCircuit, hamiltonian: list[cp.ndarray], coefficients: np.ndarray | None = None
 ) -> tuple[str, list[cp.ndarray], dict[str, tuple[list[int], list[int], Pauli]]]:
     dummy_hamiltonian = "Z" * qc_pl.num_qubits
     expr, operands, pname2locs = nnu_circuit_to_einsum_expectation(qc_pl, dummy_hamiltonian)
@@ -113,13 +113,18 @@ def circuit_to_einsum_expectation(
     if coefficients is not None:
         es.insert(max_hamiltonian_loc, "食")
     expr = ",".join(es) + "->"
+    new_pname2locs: dict[str, tuple[list[int], list[int], Pauli]] = {}
+    # shift +1 for dag_locs due to embedding of coefficients into TN
+    for name, (locs, dag_locs, make_paulis) in pname2locs.items():
+        shifted_dag_locs = [v + 1 for v in dag_locs]
+        new_pname2locs[name] = (locs, shifted_dag_locs, make_paulis)
 
-    for ham, locs in zip(hamiltonian, hamiltonian_locs):
-        operands[locs] = ham
+    for ham, locs in zip(hamiltonian, hamiltonian_locs):  # type: ignore
+        operands[locs] = ham  # type: ignore
     if coefficients is not None:
         operands.insert(max_hamiltonian_loc, cp.array(coefficients, dtype=complex))
 
-    return expr, operands, pname2locs
+    return expr, operands, new_pname2locs
 
 
 def _find_dummy_hamiltonian(operands: list[cp.ndarray]) -> list[int]:

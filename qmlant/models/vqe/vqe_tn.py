@@ -36,6 +36,9 @@ class VQE:
     ) -> QuantumCircuit | int:
         """make a simple VQE quantum circuit
 
+        A variational eigenvalue solver on a quantum processor.
+        Alberto Peruzzo, Jarrod McClean, Peter Shadbolt, Man-Hong Yung, Xiao-Qi Zhou, Peter J. Love, Alán Aspuru-Guzik, Jeremy L. O'Brien. A variational eigenvalue solver on a quantum processor. arXiv:1304.3061
+
         Args:
             n_qubits (int): number of qubits
             insert_barrier (bool): insert barriers

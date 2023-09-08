@@ -66,6 +66,13 @@ class HamiltonianConverter:
         self.num_qubits = _calc_num_qubits(ising_dict)
 
     def get_hamiltonian(self) -> tuple[list[cp.array], np.ndarray]:
+        """get Hamiltonian array and coefficients for `a_{12} Z_1 Z_2 + a_{34} Z_3 Z_4` etc.
+
+        Returns:
+            tuple[list[cp.array]: Hamiltonian array, e.g., Z_1 Z_2 + Z_3 Z_4
+            np.ndarray: Hamiltonian coefficients, e.g. [a_{12}, a_{34}]
+        """
+
         I = Identity(xp=cp)  # noqa: E741
         Z = PauliZ(xp=cp)
 
@@ -94,18 +101,23 @@ class HamiltonianConverter:
 
 
 def circuit_to_einsum_expectation(
-    qc_pl: QuantumCircuit, hamiltonian: list[cp.array]
+    qc_pl: QuantumCircuit, hamiltonian: list[cp.array], coefficients: np.ndarray | None = None
 ) -> tuple[str, list[cp.ndarray], dict[str, tuple[list[int], list[int], Pauli]]]:
     dummy_hamiltonian = "Z" * qc_pl.num_qubits
     expr, operands, pname2locs = nnu_circuit_to_einsum_expectation(qc_pl, dummy_hamiltonian)
     hamiltonian_locs = _find_dummy_hamiltonian(operands)
+    max_hamiltonian_loc = max(hamiltonian_locs)
     es = expr.split("->")[0].split(",")
     for loc in hamiltonian_locs:
         es[loc] = "食" + es[loc]  # hamu
-    expr = ",".join(es) + "->食"
+    if coefficients is not None:
+        es.insert(max_hamiltonian_loc, "食")
+    expr = ",".join(es) + "->"
 
     for ham, locs in zip(hamiltonian, hamiltonian_locs):
         operands[locs] = ham
+    if coefficients is not None:
+        operands.insert(max_hamiltonian_loc, cp.array(coefficients, dtype=complex))
 
     return expr, operands, pname2locs
 

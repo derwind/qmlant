@@ -105,7 +105,6 @@ def circuit_to_einsum_expectation(
 ) -> tuple[str, list[cp.ndarray], dict[str, tuple[list[int], list[int], Pauli]]]:
     dummy_hamiltonian = "Z" * qc_pl.num_qubits
     expr, operands, pname2locs = nnu_circuit_to_einsum_expectation(qc_pl, dummy_hamiltonian)
-    operands = _convert_dtype(operands, np.complex64)
     hamiltonian_locs = _find_dummy_hamiltonian(operands)
     max_hamiltonian_loc = max(hamiltonian_locs)
     es = expr.split("->")[0].split(",")
@@ -124,6 +123,8 @@ def circuit_to_einsum_expectation(
         operands[locs] = ham  # type: ignore
     if coefficients is not None:
         operands.insert(max_hamiltonian_loc, cp.array(coefficients, dtype=complex))
+
+    operands = _convert_dtype(operands, np.complex64)  # for better performance
 
     return expr, operands, new_pname2locs
 

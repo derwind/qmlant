@@ -105,6 +105,7 @@ def circuit_to_einsum_expectation(
 ) -> tuple[str, list[cp.ndarray], dict[str, tuple[list[int], list[int], Pauli]]]:
     dummy_hamiltonian = "Z" * qc_pl.num_qubits
     expr, operands, pname2locs = nnu_circuit_to_einsum_expectation(qc_pl, dummy_hamiltonian)
+    operands = _convert_dtype(operands, np.complex64)
     hamiltonian_locs = _find_dummy_hamiltonian(operands)
     max_hamiltonian_loc = max(hamiltonian_locs)
     es = expr.split("->")[0].split(",")
@@ -135,6 +136,10 @@ def _find_dummy_hamiltonian(operands: list[cp.ndarray]) -> list[int]:
         if cp.all(op == Z):
             locs.append(i)
     return locs
+
+
+def _convert_dtype(operands, dtype):
+    return [op.astype(dtype) for op in operands]
 
 
 def _calc_num_qubits(

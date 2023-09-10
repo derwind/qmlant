@@ -157,19 +157,21 @@ def circuit_to_einsum_expectation(
             operands.insert(max_hamiltonian_loc, cp.array(coefficients, dtype=complex))
         new_operands = _convert_dtype(operands, np.complex64)  # for better performance
     else:
+        # split hamiltonian into partial Hamiltonians in order to prevent VRAM overflow
         if coefficients is not None:
             operands.insert(max_hamiltonian_loc, cp.array(coefficients, dtype=complex))
-        new_operands = _convert_dtype(operands, np.complex64)  # for better performance
+        operands_ = _convert_dtype(operands, np.complex64)  # for better performance
 
         length = partial_hamiltonian_length
         if len(hamiltonian) % length != 0:
             n_deficiency = int(np.ceil(len(hamiltonian) / length)) * length - len(hamiltonian)
-            padding = cp.array([[MatZero] * n_deficiency], dtype=complex)
+            zero = MatZero()
+            padding = cp.array([[zero] * n_deficiency], dtype=complex)
             hamiltonian = [cp.concatenate([ham, padding], axis=0) for ham in hamiltonian]
-        hamiltonian = _convert_dtype(hamiltonian, np.complex64)
+        hamiltonian = _convert_dtype(hamiltonian, np.complex64)  # for better performance
         n_partial = len(hamiltonian) // length
         partial_hamiltonian_list = list(zip(*[cp.split(ham, n_partial) for ham in hamiltonian]))
-        new_operands = (new_operands, partial_hamiltonian_list, hamiltonian_locs)
+        new_operands = (operands_, partial_hamiltonian_list, hamiltonian_locs)
 
     return new_expr, new_operands, new_pname2locs
 

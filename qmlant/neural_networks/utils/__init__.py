@@ -1,5 +1,6 @@
 from .pauli import (
     Identity,
+    MatZero,
     Pauli,
     PauliX,
     PauliY,

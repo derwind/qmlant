@@ -9,79 +9,83 @@ import numpy as np
 Pauli = Callable
 
 
-def Identity(xp=cp) -> np.ndarray | cp.ndarray:
-    return xp.eye(2, dtype=complex)
+def MatZero(xp=cp, dtype=complex) -> np.ndarray | cp.ndarray:
+    return xp.zeros((2, 2), dtype=dtype)
 
 
-def PauliX(xp=cp) -> np.ndarray | cp.ndarray:
+def Identity(xp=cp, dtype=complex) -> np.ndarray | cp.ndarray:
+    return xp.eye(2, dtype=dtype)
+
+
+def PauliX(xp=cp, dtype=complex) -> np.ndarray | cp.ndarray:
     return xp.array(
         [[0, 1], [1, 0]],
-        dtype=complex,
+        dtype=dtype,
     )
 
 
-def PauliY(xp=cp) -> np.ndarray | cp.ndarray:
+def PauliY(xp=cp, dtype=complex) -> np.ndarray | cp.ndarray:
     return xp.array(
         [[0, -1j], [1j, 0]],
-        dtype=complex,
+        dtype=dtype,
     )
 
 
-def PauliZ(xp=cp) -> np.ndarray | cp.ndarray:
+def PauliZ(xp=cp, dtype=complex) -> np.ndarray | cp.ndarray:
     return xp.array(
         [[1, 0], [0, -1]],
-        dtype=complex,
+        dtype=dtype,
     )
 
 
-def Rx(theta: float, xp=cp) -> np.ndarray | cp.ndarray:
+def Rx(theta: float, xp=cp, dtype=complex) -> np.ndarray | cp.ndarray:
     cos = np.cos(theta / 2)
     sin = np.sin(theta / 2)
     return xp.array(
         [[cos, -sin * 1.0j], [-sin * 1.0j, cos]],
-        dtype=complex,
+        dtype=dtype,
     )
 
 
-def Ry(theta: float, xp=cp) -> np.ndarray | cp.ndarray:
+def Ry(theta: float, xp=cp, dtype=complex) -> np.ndarray | cp.ndarray:
     cos = np.cos(theta / 2)
     sin = np.sin(theta / 2)
     return xp.array(
         [[cos, -sin], [sin, cos]],
-        dtype=complex,
+        dtype=dtype,
     )
 
 
-def Rz(theta: float, xp=cp) -> np.ndarray | cp.ndarray:
+def Rz(theta: float, xp=cp, dtype=complex) -> np.ndarray | cp.ndarray:
     cos = np.cos(theta / 2)
     sin = np.sin(theta / 2)
     return xp.array(
         [[cos - sin * 1.0j, 0], [0, cos + sin * 1.0j]],
-        dtype=complex,
+        dtype=dtype,
     )
 
 
 @overload
 def Rx_Rxdag(  # type: ignore
-    theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
+    theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=..., dtype=...
 ) -> tuple[np.ndarray, np.ndarray] | tuple[cp.ndarray, cp.ndarray]:
     ...
 
 
 @overload
-def Rx_Rxdag(theta: float, mat: cp.ndarray = ..., mat_dag: cp.ndarray = ..., xp=...) -> None:
+def Rx_Rxdag(theta: float, mat: cp.ndarray = ..., mat_dag: cp.ndarray = ..., xp=..., dtype=...) -> None:
     ...
 
 
 def Rx_Rxdag(
-    theta: float, mat: cp.ndarray | None = None, mat_dag: cp.ndarray | None = None, xp=cp
+    theta: float, mat: cp.ndarray | None = None, mat_dag: cp.ndarray | None = None, xp=cp, dtype=complex
 ) -> tuple[np.ndarray | cp.ndarray, np.ndarray | cp.ndarray] | None:
     cos = np.cos(theta / 2)
     sin = np.sin(theta / 2)
     if mat is None or mat_dag is None:
         rx_rxdag = xp.array(
             [[[cos, -sin * 1.0j], [-sin * 1.0j, cos]], [[cos, sin * 1.0j], [sin * 1.0j, cos]]],
-            dtype=complex,
+            dtype=dtype,
         )
         return rx_rxdag[0], rx_rxdag[1]
 
@@ -93,25 +97,25 @@ def Rx_Rxdag(
 
 @overload
 def Ry_Rydag(  # type: ignore
-    theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
+    theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=..., dtype=...
 ) -> tuple[np.ndarray, np.ndarray] | tuple[cp.ndarray, cp.ndarray]:
     ...
 
 
 @overload
-def Ry_Rydag(theta: float, mat: cp.ndarray = ..., mat_dag: cp.ndarray = ..., xp=...) -> None:
+def Ry_Rydag(theta: float, mat: cp.ndarray = ..., mat_dag: cp.ndarray = ..., xp=..., dtype=...) -> None:
     ...
 
 
 def Ry_Rydag(
-    theta: float, mat: cp.ndarray | None = None, mat_dag: cp.ndarray | None = None, xp=cp
+    theta: float, mat: cp.ndarray | None = None, mat_dag: cp.ndarray | None = None, xp=cp, dtype=complex
 ) -> tuple[np.ndarray | cp.ndarray, np.ndarray | cp.ndarray] | None:
     cos = np.cos(theta / 2)
     sin = np.sin(theta / 2)
     if mat is None or mat_dag is None:
         ry_rydag = xp.array(
             [[[cos, -sin], [sin, cos]], [[cos, sin], [-sin, cos]]],
-            dtype=complex,
+            dtype=dtype,
         )
         return ry_rydag[0], ry_rydag[1]
 
@@ -123,18 +127,18 @@ def Ry_Rydag(
 
 @overload
 def Rz_Rzdag(  # type: ignore
-    theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
+    theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=..., dtype=...
 ) -> tuple[np.ndarray, np.ndarray] | tuple[cp.ndarray, cp.ndarray]:
     ...
 
 
 @overload
-def Rz_Rzdag(theta: float, mat: cp.ndarray = ..., mat_dag: cp.ndarray = ..., xp=...) -> None:
+def Rz_Rzdag(theta: float, mat: cp.ndarray = ..., mat_dag: cp.ndarray = ..., xp=..., dtype=...) -> None:
     ...
 
 
 def Rz_Rzdag(
-    theta: float, mat: cp.ndarray | None = None, mat_dag: cp.ndarray | None = None, xp=cp
+    theta: float, mat: cp.ndarray | None = None, mat_dag: cp.ndarray | None = None, xp=cp, dtype=complex
 ) -> tuple[np.ndarray | cp.ndarray, np.ndarray | cp.ndarray] | None:
     cos = np.cos(theta / 2)
     sin = np.sin(theta / 2)
@@ -144,7 +148,7 @@ def Rz_Rzdag(
                 [[cos - sin * 1.0j, 0], [0, cos + sin * 1.0j]],
                 [[cos + sin * 1.0j, 0], [0, cos - sin * 1.0j]],
             ],
-            dtype=complex,
+            dtype=dtype,
         )
         return rz_rzdag[0], rz_rzdag[1]
 
@@ -156,18 +160,18 @@ def Rz_Rzdag(
 
 @overload
 def Rzz_Rzzdag(  # type: ignore
-    theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=...
+    theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=..., dtype=...
 ) -> tuple[np.ndarray, np.ndarray] | tuple[cp.ndarray, cp.ndarray]:
     ...
 
 
 @overload
-def Rzz_Rzzdag(theta: float, mat: cp.ndarray = ..., mat_dag: cp.ndarray = ..., xp=...) -> None:
+def Rzz_Rzzdag(theta: float, mat: cp.ndarray = ..., mat_dag: cp.ndarray = ..., xp=..., dtype=...) -> None:
     ...
 
 
 def Rzz_Rzzdag(
-    theta: float, mat: cp.ndarray | None = None, mat_dag: cp.ndarray | None = None, xp=cp
+    theta: float, mat: cp.ndarray | None = None, mat_dag: cp.ndarray | None = None, xp=cp, dtype=complex
 ) -> tuple[np.ndarray | cp.ndarray, np.ndarray | cp.ndarray] | None:
     cos = np.cos(theta / 2)
     sin = np.sin(theta / 2)
@@ -183,7 +187,7 @@ def Rzz_Rzzdag(
                     [[[0, 0], [cos - sin * 1j, 0]], [[0, 0], [0, cos + sin * 1j]]],
                 ],
             ],
-            dtype=complex,
+            dtype=dtype,
         )
         return rzz_rzzdag[0], rzz_rzzdag[1]
 
@@ -198,7 +202,7 @@ def Rzz_Rzzdag(
 
 
 def Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag(
-    theta: float, xp=cp
+    theta: float, xp=cp, dtype=complex
 ) -> (
     tuple[
         np.ndarray,
@@ -226,12 +230,12 @@ def Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag(
 
     rx_rxdag = xp.array(
         [[[cos, -sin * 1.0j], [-sin * 1.0j, cos]], [[cos, sin * 1.0j], [sin * 1.0j, cos]]],
-        dtype=complex,
+        dtype=dtype,
     )
 
     ry_rydag = xp.array(
         [[[cos, -sin], [sin, cos]], [[cos, sin], [-sin, cos]]],
-        dtype=complex,
+        dtype=dtype,
     )
 
     rz_rzdag = xp.array(
@@ -239,7 +243,7 @@ def Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag(
             [[cos - sin * 1.0j, 0], [0, cos + sin * 1.0j]],
             [[cos + sin * 1.0j, 0], [0, cos - sin * 1.0j]],
         ],
-        dtype=complex,
+        dtype=dtype,
     )
 
     rzz_rzzdag = xp.array(
@@ -253,7 +257,7 @@ def Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag(
                 [[[0, 0], [cos - sin * 1j, 0]], [[0, 0], [0, cos + sin * 1j]]],
             ],
         ],
-        dtype=complex,
+        dtype=dtype,
     )
     return (
         rx_rxdag[0],

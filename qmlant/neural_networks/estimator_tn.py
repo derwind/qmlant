@@ -34,7 +34,9 @@ class EstimatorTN:
         self,
         pname2locs: dict[str, tuple[list[int], list[int], Pauli]],
         expr: str | None = None,
-        operands: list[cp.ndarray] | None = None,
+        operands: list[cp.ndarray]
+        | tuple[list[cp.ndarray], tuple[tuple[cp.ndarray]], list[int]]
+        | None = None,
         make_pname2theta: Callable[
             [Sequence[float] | np.ndarray], dict[str, float]
         ] = default_make_pname2theta,
@@ -85,9 +87,26 @@ class EstimatorTN:
             expectation values
         """
 
-        self.expr, self.operands = self._prepare_circuit(params, self.expr, self.operands, batch)
+        if isinstance(self.operands, list):
+            operands = self.operands
+        else:
+            operands = self.operands[0]  # for complicated Hamiltonians of QAOA
+        self.expr, self.operands = self._prepare_circuit(params, self.expr, operands, batch)
         self._params = params
-        self._last_forward = cp.asnumpy(contract(self.expr, *self.operands).real.reshape(-1, 1))
+
+        if isinstance(self.operands, list):
+            self._last_forward = cp.asnumpy(contract(self.expr, *operands).real.reshape(-1, 1))
+        else:
+            partial_hamiltonian_list = self.operands[1]
+            hamiltonian_locs = self.operands[2]
+            self._last_forward = 0
+            for partial_hamiltonian in partial_hamiltonian_list:
+                for ham, locs in zip(partial_hamiltonian, hamiltonian_locs):
+                    operands[locs] = ham
+                    self._last_forward += cp.asnumpy(
+                        contract(self.expr, *operands).real.reshape(-1, 1)
+                    )
+
         if batch is None:
             self._last_forward = np.sum(self._last_forward)
         return self._last_forward
@@ -124,7 +143,7 @@ class EstimatorTN:
         if expr is None:
             expr = self.expr
         if operands is None:
-            operands = self.operands
+            operands = self.operands  # type: ignore
 
         if expr is None:
             raise ValueError("`expr` must not be None.")

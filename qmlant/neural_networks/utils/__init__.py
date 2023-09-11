@@ -14,6 +14,8 @@ from .pauli import (
     Rz_Rzdag,
 )
 from .utils import (
+    ParameterName2Locs,
+    SplittedOperandsDict,
     circuit_to_einsum_expectation,
     replace_by_batch,
     replace_pauli,

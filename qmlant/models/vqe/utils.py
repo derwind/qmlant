@@ -4,7 +4,13 @@ import cupy as cp
 import numpy as np
 from qiskit import QuantumCircuit
 
-from qmlant.neural_networks.utils import Identity, MatZero, Pauli, PauliZ
+from qmlant.neural_networks.utils import (
+    Identity,
+    MatZero,
+    ParameterName2Locs,
+    PauliZ,
+    SplittedOperandsDict,
+)
 from qmlant.neural_networks.utils import (
     circuit_to_einsum_expectation as nnu_circuit_to_einsum_expectation,
 )
@@ -106,11 +112,11 @@ def circuit_to_einsum_expectation(
     coefficients: np.ndarray | None = None,
     partial_hamiltonian_length=1,
 ) -> (
-    tuple[str, list[cp.ndarray], dict[str, tuple[list[int], list[int], Pauli]]]
+    tuple[str, list[cp.ndarray], ParameterName2Locs]
     | tuple[
         str,
-        tuple[list[cp.ndarray], tuple[tuple[cp.ndarray]], list[int]],
-        dict[str, tuple[list[int], list[int], Pauli]],
+        SplittedOperandsDict,
+        ParameterName2Locs,
     ]
 ):
     """CircuitToEinsum with hamiltonian embedded for `expectation`
@@ -140,7 +146,7 @@ def circuit_to_einsum_expectation(
     for loc in hamiltonian_locs:
         es[loc] = "食" + es[loc]  # hamu
     # and embed coefficients if needed with updating pname2locs
-    new_pname2locs: dict[str, tuple[list[int], list[int], Pauli]] = {}
+    new_pname2locs: ParameterName2Locs = {}
     if coefficients is None:
         new_pname2locs = pname2locs
     else:
@@ -149,7 +155,8 @@ def circuit_to_einsum_expectation(
         for name, (locs, dag_locs, make_paulis) in pname2locs.items():
             shifted_dag_locs = [v + 1 for v in dag_locs]
             new_pname2locs[name] = (locs, shifted_dag_locs, make_paulis)
-        operands.insert(coefficients_loc, cp.array(coefficients, dtype=complex))
+        coefficients = cp.array(coefficients, dtype=complex)
+        operands.insert(coefficients_loc, coefficients)
     new_expr = ",".join(es) + "->"
 
     # update operands with real hamiltonian
@@ -161,15 +168,32 @@ def circuit_to_einsum_expectation(
         operands_ = _convert_dtype(operands, np.complex64)  # for better performance
         # split hamiltonian into partial Hamiltonians in order to prevent VRAM overflow
         length = partial_hamiltonian_length
-        if len(hamiltonian) % length != 0:
-            n_deficiency = int(np.ceil(len(hamiltonian) / length)) * length - len(hamiltonian)
+        if len(hamiltonian[0]) % length != 0:
+            n_deficiency = int(np.ceil(len(hamiltonian[0]) / length)) * length - len(hamiltonian[0])
             zero = MatZero()
-            padding = cp.array([[zero] * n_deficiency], dtype=complex)
+            padding = cp.array([zero] * n_deficiency, dtype=complex)
             hamiltonian = [cp.concatenate([ham, padding], axis=0) for ham in hamiltonian]
+
+            if coefficients is not None:
+                padding = cp.array([0] * n_deficiency, dtype=complex)
+                coefficients = cp.concatenate([coefficients, padding], axis=0)
+
         hamiltonian = _convert_dtype(hamiltonian, np.complex64)  # for better performance
-        n_partial = len(hamiltonian) // length
+        n_partial = len(hamiltonian[0]) // length
         partial_hamiltonian_list = list(zip(*[cp.split(ham, n_partial) for ham in hamiltonian]))
-        new_operands = (operands_, partial_hamiltonian_list, hamiltonian_locs)
+
+        coefficients_list = None
+        if coefficients is not None:
+            coefficients = _convert_dtype(coefficients, dtype=np.complex64)  # type: ignore
+            coefficients_list = tuple(cp.split(coefficients, n_partial))
+
+        new_operands: SplittedOperandsDict = {  # type: ignore
+            "operands": operands_,
+            "partial_hamiltonian_list": partial_hamiltonian_list,
+            "hamiltonian_locs": hamiltonian_locs,
+            "coefficients_list": coefficients_list,
+            "coefficients_loc": coefficients_loc if coefficients_list is not None else None,
+        }
 
     return new_expr, new_operands, new_pname2locs
 
@@ -184,8 +208,11 @@ def _find_dummy_hamiltonian(operands: list[cp.ndarray]) -> list[int]:
     return locs
 
 
-def _convert_dtype(operands, dtype):
-    return [op.astype(dtype) for op in operands]
+def _convert_dtype(x: cp.ndarray | list[cp.ndarray], dtype) -> cp.ndarray | list[cp.ndarray]:
+    if isinstance(x, list):
+        return [elem.astype(dtype) for elem in x]
+    else:
+        return x.astype(dtype)
 
 
 def _calc_num_qubits(

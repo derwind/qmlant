@@ -7,7 +7,13 @@ import cupy as cp
 import numpy as np
 from cuquantum import contract
 
-from .utils import Pauli, replace_by_batch, replace_pauli, replace_pauli_phase_shift
+from .utils import (
+    ParameterName2Locs,
+    SplittedOperandsDict,
+    replace_by_batch,
+    replace_pauli,
+    replace_pauli_phase_shift,
+)
 
 
 def default_make_pname2theta(params: Sequence[float] | np.ndarray) -> dict[str, float]:
@@ -32,11 +38,9 @@ class EstimatorTN:
 
     def __init__(
         self,
-        pname2locs: dict[str, tuple[list[int], list[int], Pauli]],
+        pname2locs: ParameterName2Locs,
         expr: str | None = None,
-        operands: list[cp.ndarray]
-        | tuple[list[cp.ndarray], tuple[tuple[cp.ndarray]], list[int]]
-        | None = None,
+        operands: list[cp.ndarray] | SplittedOperandsDict | None = None,
         make_pname2theta: Callable[
             [Sequence[float] | np.ndarray], dict[str, float]
         ] = default_make_pname2theta,
@@ -89,23 +93,38 @@ class EstimatorTN:
 
         if isinstance(self.operands, list):
             operands = self.operands
+        elif isinstance(self.operands, dict):  # SplittedOperandsDict
+            operands = self.operands["operands"]  # for complicated Hamiltonians of QAOA
         else:
-            operands = self.operands[0]  # for complicated Hamiltonians of QAOA
-        self.expr, self.operands = self._prepare_circuit(params, self.expr, operands, batch)
+            raise ValueError(
+                f"type of operands ({type(self.operands)}) must be `list` or `SplittedOperandsDict`"
+            )
+        self.expr, operands = self._prepare_circuit(params, self.expr, operands, batch)
+        if isinstance(self.operands, list):
+            self.operands = operands
+        else:  # SplittedOperandsDict
+            self.operands["operands"] = operands
         self._params = params
 
         if isinstance(self.operands, list):
             self._last_forward = cp.asnumpy(contract(self.expr, *operands).real.reshape(-1, 1))
-        else:
-            partial_hamiltonian_list = self.operands[1]
-            hamiltonian_locs = self.operands[2]
-            self._last_forward = 0
-            for partial_hamiltonian in partial_hamiltonian_list:
+        elif isinstance(self.operands, dict):  # SplittedOperandsDict
+            partial_hamiltonian_list = self.operands["partial_hamiltonian_list"]
+            hamiltonian_locs = self.operands["hamiltonian_locs"]
+            coefficients_list = self.operands["coefficients_list"]
+            coefficients_loc = self.operands["coefficients_loc"]
+
+            self._last_forward = 0  # type: ignore
+            for i, partial_hamiltonian in enumerate(partial_hamiltonian_list):
                 for ham, locs in zip(partial_hamiltonian, hamiltonian_locs):
                     operands[locs] = ham
-                    self._last_forward += cp.asnumpy(
-                        contract(self.expr, *operands).real.reshape(-1, 1)
-                    )
+                if coefficients_loc is not None and coefficients_list is not None:
+                    operands[coefficients_loc] = coefficients_list[i]
+                self._last_forward += cp.asnumpy(contract(self.expr, *operands).real.reshape(-1, 1))
+        else:
+            raise ValueError(
+                f"type of operands ({type(self.operands)}) must be `list` or `SplittedOperandsDict`"
+            )
 
         if batch is None:
             self._last_forward = np.sum(self._last_forward)

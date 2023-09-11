@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from typing import TypedDict
 
 import cupy as cp
 import numpy as np
@@ -18,9 +19,20 @@ from .pauli import (
 )
 
 
+class SplittedOperandsDict(TypedDict):
+    operands: list[cp.ndarray]
+    partial_hamiltonian_list: tuple[tuple[cp.ndarray]]
+    hamiltonian_locs: list[int]
+    coefficients_list: tuple[cp.ndarray] | None
+    coefficients_loc: int | None
+
+
+ParameterName2Locs = dict[str, tuple[list[int], list[int], Pauli]]
+
+
 def circuit_to_einsum_expectation(
     qc_pl: QuantumCircuit, hamiltonian: str
-) -> tuple[str, list[cp.ndarray], dict[str, tuple[list[int], list[int], Pauli]]]:
+) -> tuple[str, list[cp.ndarray], ParameterName2Locs]:
     """apply CircuitToEinsum and find Pauli (whose name are "x[i]", "θ[i]" etc.) locations in the given placeholder circuit
 
     Args:
@@ -88,7 +100,7 @@ def replace_by_batch(
     expr: str,
     operands: list[cp.ndarray],
     pname2theta_list: dict[str, list[float] | np.ndarray],
-    pname2locs: dict[str, tuple[list[int], list[int], Pauli]],
+    pname2locs: ParameterName2Locs,
     batch_symbol: str = "撥",
 ) -> tuple[str, list[cp.ndarray]]:
     # symbols are: a, b, c, ..., z, A, B, C, ..., 撥
@@ -117,7 +129,7 @@ def replace_by_batch(
 def replace_pauli(
     operands: list[cp.ndarray],
     pname2theta: dict[str, float],
-    pname2locs: dict[str, tuple[list[int], list[int], Pauli]],
+    pname2locs: ParameterName2Locs,
 ) -> list[cp.ndarray]:
     for pname, theta in pname2theta.items():  # e.g. pname[0] = "θ[0]"
         # pname may be not found due to cancellation between op and op_dagger
@@ -133,7 +145,7 @@ def replace_pauli(
 def replace_pauli_phase_shift(
     operands: list[cp.ndarray],
     pname2theta: dict[str, float],
-    pname2locs: dict[str, tuple[list[int], list[int], Pauli]],
+    pname2locs: ParameterName2Locs,
     phase_shift_list: Sequence[float] = (np.pi / 2, -np.pi / 2),
 ) -> list[cp.ndarray]:
     i = 0

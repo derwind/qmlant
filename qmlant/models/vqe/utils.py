@@ -133,35 +133,33 @@ def circuit_to_einsum_expectation(
     dummy_hamiltonian = "Z" * qc_pl.num_qubits
     expr, operands, pname2locs = nnu_circuit_to_einsum_expectation(qc_pl, dummy_hamiltonian)
     hamiltonian_locs = _find_dummy_hamiltonian(operands)
-    max_hamiltonian_loc = max(hamiltonian_locs)
+    coefficients_loc = max(hamiltonian_locs) + 1
 
-    # update expr, embed coefficients if needed
+    # update expr,
     es = expr.split("->")[0].split(",")
     for loc in hamiltonian_locs:
         es[loc] = "食" + es[loc]  # hamu
-    if coefficients is not None:
-        es.insert(max_hamiltonian_loc, "食")
-    new_expr = ",".join(es) + "->"
+    # and embed coefficients if needed with updating pname2locs
     new_pname2locs: dict[str, tuple[list[int], list[int], Pauli]] = {}
-
-    # shift +1 for dag_locs due to embedding of coefficients into TN
-    for name, (locs, dag_locs, make_paulis) in pname2locs.items():
-        shifted_dag_locs = [v + 1 for v in dag_locs]
-        new_pname2locs[name] = (locs, shifted_dag_locs, make_paulis)
+    if coefficients is None:
+        new_pname2locs = pname2locs
+    else:
+        es.insert(coefficients_loc, "食")
+        # shift +1 for dag_locs due to embedding of coefficients into TN
+        for name, (locs, dag_locs, make_paulis) in pname2locs.items():
+            shifted_dag_locs = [v + 1 for v in dag_locs]
+            new_pname2locs[name] = (locs, shifted_dag_locs, make_paulis)
+        operands.insert(coefficients_loc, cp.array(coefficients, dtype=complex))
+    new_expr = ",".join(es) + "->"
 
     # update operands with real hamiltonian
     if partial_hamiltonian_length <= 1:
         for ham, locs in zip(hamiltonian, hamiltonian_locs):  # type: ignore
             operands[locs] = ham  # type: ignore
-        if coefficients is not None:
-            operands.insert(max_hamiltonian_loc, cp.array(coefficients, dtype=complex))
         new_operands = _convert_dtype(operands, np.complex64)  # for better performance
     else:
-        # split hamiltonian into partial Hamiltonians in order to prevent VRAM overflow
-        if coefficients is not None:
-            operands.insert(max_hamiltonian_loc, cp.array(coefficients, dtype=complex))
         operands_ = _convert_dtype(operands, np.complex64)  # for better performance
-
+        # split hamiltonian into partial Hamiltonians in order to prevent VRAM overflow
         length = partial_hamiltonian_length
         if len(hamiltonian) % length != 0:
             n_deficiency = int(np.ceil(len(hamiltonian) / length)) * length - len(hamiltonian)

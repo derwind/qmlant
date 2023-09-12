@@ -34,6 +34,9 @@ class EstimatorTN:
         operands (list[cp.ndarray] | None): initial `operands` by `CircuitToEinsum`
         make_pname2theta (Callable): a function which generates `pname2theta`, e.g. `{"x[0]": 0.23, "x[1]": -0.54, "θ[0]": 1.32}`
         batch_filter (Callable): a function which converts batch data, e.g. `lambda batch: batch * 2`
+        memory_limit (int | str): Maximum memory available to cuTensorNet. It can be specified
+                                  as a value (with optional suffix like K[iB], M[iB], G[iB]) or
+                                  as a percentage. The default is 80%. see https://github.com/NVIDIA/cuQuantum/blob/main/python/cuquantum/cutensornet/configuration.py
     """
 
     def __init__(
@@ -45,12 +48,14 @@ class EstimatorTN:
             [Sequence[float] | np.ndarray], dict[str, float]
         ] = default_make_pname2theta,
         batch_filter: Callable[[np.ndarray], np.ndarray] = default_batch_filter,
+        memory_limit: int | str = r"80%",
     ):
         self.pname2locs = pname2locs
         self.expr = expr
         self.operands = operands
         self.make_pname2theta = make_pname2theta
         self.batch_filter = batch_filter
+        self.memory_limit = memory_limit
         self._params: Sequence[float] | np.ndarray | None = None  # cache params of forward
         self._last_forward: np.ndarray | None = None  # cache expvals of forward
 
@@ -120,7 +125,11 @@ class EstimatorTN:
                     operands[locs] = ham
                 if coefficients_loc is not None and coefficients_list is not None:
                     operands[coefficients_loc] = coefficients_list[i]
-                self._last_forward += cp.asnumpy(contract(self.expr, *operands).real.reshape(-1, 1))
+                self._last_forward += cp.asnumpy(
+                    contract(
+                        self.expr, *operands, options={"memory_limit": self.memory_limit}
+                    ).real.reshape(-1, 1)
+                )
         else:
             raise ValueError(
                 f"type of operands ({type(self.operands)}) must be `list` or `SplittedOperandsDict`"
@@ -151,7 +160,11 @@ class EstimatorTN:
 
         expr, operands = self._prepare_circuit(params, expr, operands, batch)
         self._params = params
-        self._last_forward = cp.asnumpy(contract(expr, *operands).real.reshape(-1, 1))
+        self._last_forward = cp.asnumpy(
+            contract(expr, *operands, options={"memory_limit": self.memory_limit}).real.reshape(
+                -1, 1
+            )
+        )
         if batch is None:
             self._last_forward = np.sum(self._last_forward)
         return self._last_forward, expr, operands

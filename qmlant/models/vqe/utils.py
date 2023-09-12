@@ -110,7 +110,8 @@ def circuit_to_einsum_expectation(
     qc_pl: QuantumCircuit,
     hamiltonian: list[cp.ndarray],
     coefficients: np.ndarray | None = None,
-    partial_hamiltonian_length=1,
+    prioritize_performance: bool = True,
+    partial_hamiltonian_length: int = 1,
 ) -> (
     tuple[str, list[cp.ndarray], ParameterName2Locs]
     | tuple[
@@ -163,9 +164,9 @@ def circuit_to_einsum_expectation(
     if partial_hamiltonian_length <= 1:
         for ham, locs in zip(hamiltonian, hamiltonian_locs):  # type: ignore
             operands[locs] = ham  # type: ignore
-        new_operands = _convert_dtype(operands, np.complex64)  # for better performance
+        new_operands = _convert_dtype(operands, prioritize_performance)  # for better performance
     else:
-        operands_ = _convert_dtype(operands, np.complex64)  # for better performance
+        operands_ = _convert_dtype(operands, prioritize_performance)  # for better performance
         # split hamiltonian into partial Hamiltonians in order to prevent VRAM overflow
         length = partial_hamiltonian_length
         if len(hamiltonian[0]) % length != 0:
@@ -178,13 +179,13 @@ def circuit_to_einsum_expectation(
                 padding = cp.array([0] * n_deficiency, dtype=complex)
                 coefficients = cp.concatenate([coefficients, padding], axis=0)
 
-        hamiltonian = _convert_dtype(hamiltonian, np.complex64)  # for better performance
+        hamiltonian = _convert_dtype(hamiltonian, prioritize_performance)  # for better performance
         n_partial = len(hamiltonian[0]) // length
         partial_hamiltonian_list = list(zip(*[cp.split(ham, n_partial) for ham in hamiltonian]))
 
         coefficients_list = None
         if coefficients is not None:
-            coefficients = _convert_dtype(coefficients, dtype=np.complex64)  # type: ignore
+            coefficients = _convert_dtype(coefficients, prioritize_performance)  # type: ignore
             coefficients_list = tuple(cp.split(coefficients, n_partial))
 
         new_operands: SplittedOperandsDict = {  # type: ignore
@@ -208,11 +209,15 @@ def _find_dummy_hamiltonian(operands: list[cp.ndarray]) -> list[int]:
     return locs
 
 
-def _convert_dtype(x: cp.ndarray | list[cp.ndarray], dtype) -> cp.ndarray | list[cp.ndarray]:
-    if isinstance(x, list):
-        return [elem.astype(dtype) for elem in x]
-    else:
-        return x.astype(dtype)
+def _convert_dtype(
+    x: cp.ndarray | list[cp.ndarray], prioritize_performance: bool = True
+) -> cp.ndarray | list[cp.ndarray]:
+    if prioritize_performance:
+        if isinstance(x, list):
+            return [elem.astype(np.complex64) for elem in x]
+        else:
+            return x.astype(np.complex64)
+    return x
 
 
 def _calc_num_qubits(

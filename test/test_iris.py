@@ -203,8 +203,8 @@ class TestIrus(unittest.TestCase):
         placeholder_circuit = TTN.make_placeholder_circuit(n_qubits)
         hamiltonian = TTN.get_hamiltonian(n_qubits)
 
-        rng = np.random.Generator(10)
-        init = rng.random.random(length) * 2 * math.pi
+        rng = np.random.default_rng(10)
+        init = rng.random(length) * 2 * math.pi
 
         opt_params, loss_list = RunPQCTrain(
             PQCTrainerTN, trainset, 64, placeholder_circuit, hamiltonian, init=init, epochs=100
@@ -286,8 +286,8 @@ class TestIrus(unittest.TestCase):
         placeholder_circuit = TTN.make_placeholder_circuit(n_qubits)
         hamiltonian = TTN.get_hamiltonian(n_qubits)
 
-        rng = np.random.Generator(10)
-        init = rng.random.random(length) * 2 * math.pi
+        rng = np.random.default_rng(10)
+        init = rng.random(length) * 2 * math.pi
 
         opt_params, loss_list = RunPQCTrain(
             PQCTrainerTN2, trainset, 64, placeholder_circuit, hamiltonian, init=init, epochs=100

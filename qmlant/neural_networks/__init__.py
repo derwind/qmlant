@@ -1,9 +1,9 @@
 from .estimator_tn import EstimatorTN
 from .utils import (
     Pauli,
+    PauliMatrices,
     Rx,
     Rx_Rxdag,
-    Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag,
     Ry,
     Ry_Rydag,
     Rz,

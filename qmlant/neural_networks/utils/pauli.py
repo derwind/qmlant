@@ -201,7 +201,7 @@ def Rzz_Rzzdag(
     return None
 
 
-def Rx_Rxdag_Ry_Rydag_Rz_Rzdag_Rzz_Rzzdag(
+def PauliMatrices(
     theta: float, xp=cp, dtype=complex
 ) -> (
     tuple[

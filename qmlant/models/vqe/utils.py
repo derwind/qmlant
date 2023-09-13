@@ -111,7 +111,7 @@ def circuit_to_einsum_expectation(
     hamiltonian: list[cp.ndarray],
     coefficients: np.ndarray | None = None,
     prioritize_performance: bool = True,
-    partial_hamiltonian_length: int = 1,
+    n_partial_hamiltonian: int = 1,
 ) -> (
     tuple[str, list[cp.ndarray], ParameterName2Locs]
     | tuple[
@@ -126,8 +126,8 @@ def circuit_to_einsum_expectation(
         qc_pl (QuantumCircuit): placeholder `QuantumCircuit` with `ParameterVector`
         hamiltonian (list[cp.ndarray]): Hamiltonian list
         coefficients (np.ndarray | None): coefficients of Hamiltonian
-        partial_hamiltonian_length (int): III+IIZ, IZI,ZII, ZIZ+ZZI for
-            III + IIZ + IZI + ZII + ZIZ + ZZI if partial_hamiltonian_length = 2
+        n_partial_hamiltonian (int): III+IIZ, IZI,ZII, ZIZ+ZZI for
+            III + IIZ + IZI + ZII + ZIZ + ZZI if n_partial_hamiltonian = 2
 
     Returns:
         str: `expr`
@@ -161,14 +161,14 @@ def circuit_to_einsum_expectation(
     new_expr = ",".join(es) + "->"
 
     # update operands with real hamiltonian
-    if partial_hamiltonian_length <= 1:
+    if n_partial_hamiltonian <= 1:
         for ham, locs in zip(hamiltonian, hamiltonian_locs):  # type: ignore
             operands[locs] = ham  # type: ignore
         new_operands = _convert_dtype(operands, prioritize_performance)  # for better performance
     else:
         operands_ = _convert_dtype(operands, prioritize_performance)  # for better performance
         # split hamiltonian into partial Hamiltonians in order to prevent VRAM overflow
-        length = partial_hamiltonian_length
+        length = n_partial_hamiltonian
         if len(hamiltonian[0]) % length != 0:
             n_deficiency = int(np.ceil(len(hamiltonian[0]) / length)) * length - len(hamiltonian[0])
             zero = MatZero()

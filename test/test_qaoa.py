@@ -91,3 +91,68 @@ class TestExpectation(unittest.TestCase):
             estimator_tn = EstimatorTN(pname2locs, expr, operands)
             expval = estimator_tn.forward(init)
             self.assertAlmostEqual(expval, answer_expval, 6)
+
+    def test_circuit_to_einsum_expectation_with_coefficients(self):
+        qc = QuantumCircuit(3)
+        theta = ParameterVector("θ", 6)
+        qc.rx(theta[0], 0)
+        qc.ry(theta[1], 1)
+        qc.rz(theta[2], 2)
+        qc.cx(0, 1)
+        qc.cx(1, 2)
+        qc.cx(2, 0)
+        qc.rx(theta[3], 0)
+        qc.ry(theta[4], 1)
+        qc.rz(theta[5], 2)
+
+        rng = np.random.default_rng(42)
+        init = rng.random(qc.num_parameters) * 2 * np.pi
+
+        pauli_list = ["III", "IIZ", "IZI", "IZZ", "ZII", "ZIZ", "ZZI", "ZZZ"]
+        coefficients = [2, -3, 1, -1.5, 5.1, 0.3, -4.3, -0.5]
+        hamiltonian = SparsePauliOp(pauli_list, coefficients)
+        estimator = Estimator()
+        result = estimator.run([qc], [hamiltonian], init).result()
+        answer_expval = result.values[0]
+
+        hamiltonian_tn = self.pauli_list2hamiltonian(pauli_list)
+        expr, operands, pname2locs = circuit_to_einsum_expectation(qc, hamiltonian_tn, coefficients)
+        estimator_tn = EstimatorTN(pname2locs, expr, operands)
+        expval = estimator_tn.forward(init)
+        self.assertAlmostEqual(expval, answer_expval, 5)
+
+    def test_circuit_to_einsum_expectation_with_coefficients2(self):
+        qc = QuantumCircuit(3)
+        theta = ParameterVector("θ", 6)
+        qc.rx(theta[0], 0)
+        qc.ry(theta[1], 1)
+        qc.rz(theta[2], 2)
+        qc.cx(0, 1)
+        qc.cx(1, 2)
+        qc.cx(2, 0)
+        qc.rx(theta[3], 0)
+        qc.ry(theta[4], 1)
+        qc.rz(theta[5], 2)
+
+        pauli_list = ["III", "IIZ", "IZI", "IZZ", "ZII", "ZIZ", "ZZI", "ZZZ"]
+        coefficients = [2, -3, 1, -1.5, 5.1, 0.3, -4.3, -0.5]
+        hamiltonian = SparsePauliOp(pauli_list, coefficients)
+        hamiltonian_tn = self.pauli_list2hamiltonian(pauli_list)
+        rng = np.random.default_rng(42)
+        inits = np.split(
+            rng.random(qc.num_parameters * (len(pauli_list) - 1)) * 2 * np.pi,
+            len(pauli_list) - 1,
+        )
+
+        for i, init in enumerate(inits):
+            estimator = Estimator()
+            result = estimator.run([qc], [hamiltonian], init).result()
+            answer_expval = result.values[0]
+
+            n_partial_hamiltonian = i + 2
+            expr, operands, pname2locs = circuit_to_einsum_expectation(
+                qc, hamiltonian_tn, coefficients, n_partial_hamiltonian=n_partial_hamiltonian
+            )
+            estimator_tn = EstimatorTN(pname2locs, expr, operands)
+            expval = estimator_tn.forward(init)
+            self.assertAlmostEqual(expval, answer_expval, 5)

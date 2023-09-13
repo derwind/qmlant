@@ -36,7 +36,7 @@ class IsingConverter:
                 new_k = (f"z{ln}",)
                 ising_dict.setdefault(new_k, 0.0)
                 ising_dict[new_k] += -v / 2
-                offset += 1 / 2
+                offset += v / 2
             else:
                 new_k = (f"z{ln}", f"z{rn}")
                 ising_dict.setdefault(new_k, 0.0)
@@ -47,7 +47,7 @@ class IsingConverter:
                 new_k = (f"z{rn}",)
                 ising_dict.setdefault(new_k, 0.0)
                 ising_dict[new_k] += -v / 4
-                offset += 1 / 4
+                offset += v / 4
 
         ising_dict = dict(sorted(ising_dict.items(), key=lambda k_v: self._calc_key(k_v[0])))
         return ising_dict, offset

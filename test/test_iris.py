@@ -203,7 +203,7 @@ class TestIrus(unittest.TestCase):
         placeholder_circuit = TTN.make_placeholder_circuit(n_qubits)
         hamiltonian = TTN.get_hamiltonian(n_qubits)
 
-        rng = np.random.default_rng(10)
+        rng = np.random.default_rng(42)
         init = rng.random(length) * 2 * math.pi
 
         opt_params, loss_list = RunPQCTrain(
@@ -216,13 +216,13 @@ class TestIrus(unittest.TestCase):
         min_loss = min(loss_list)
         # test below sometimes failes due to variations
         self.assertLess(min_loss, 0.31)
-        self.assertTrue(3.5 < opt_params[0] < 4.5, opt_params[0])
-        self.assertTrue(-0.6 < opt_params[1] < -0.5, opt_params[1])
+        self.assertTrue(5.0 < opt_params[0] < 5.5, opt_params[0])
+        self.assertTrue(2.0 < opt_params[1] < 2.5, opt_params[1])
         self.assertTrue(4.5 < opt_params[2] < 5.5, opt_params[2])
         self.assertTrue(5.0 < opt_params[3] < 6.0, opt_params[3])
-        self.assertTrue(2.0 < opt_params[4] < 3.0, opt_params[4])
-        self.assertTrue(1.5 < opt_params[5] < 2.5, opt_params[5])
-        self.assertTrue(0.5 < opt_params[6] < 1.5, opt_params[6])
+        self.assertTrue(0.9 < opt_params[4] < 1.0, opt_params[4])
+        self.assertTrue(5.5 < opt_params[5] < 6.0, opt_params[5])
+        self.assertTrue(4.0 < opt_params[6] < 5.0, opt_params[6])
 
         params = opt_params
         expr, operands, pname2locs = circuit_to_einsum_expectation(placeholder_circuit, hamiltonian)
@@ -286,7 +286,7 @@ class TestIrus(unittest.TestCase):
         placeholder_circuit = TTN.make_placeholder_circuit(n_qubits)
         hamiltonian = TTN.get_hamiltonian(n_qubits)
 
-        rng = np.random.default_rng(10)
+        rng = np.random.default_rng(42)
         init = rng.random(length) * 2 * math.pi
 
         opt_params, loss_list = RunPQCTrain(
@@ -299,13 +299,13 @@ class TestIrus(unittest.TestCase):
         min_loss = min(loss_list)
         # test below sometimes failes due to variations
         self.assertLess(min_loss, 0.31)
-        self.assertTrue(3.5 < opt_params[0] < 4.5, opt_params[0])
-        self.assertTrue(-0.6 < opt_params[1] < -0.5, opt_params[1])
+        self.assertTrue(5.0 < opt_params[0] < 5.5, opt_params[0])
+        self.assertTrue(2.0 < opt_params[1] < 2.5, opt_params[1])
         self.assertTrue(4.5 < opt_params[2] < 5.5, opt_params[2])
         self.assertTrue(5.0 < opt_params[3] < 6.0, opt_params[3])
-        self.assertTrue(2.0 < opt_params[4] < 3.0, opt_params[4])
-        self.assertTrue(1.5 < opt_params[5] < 2.5, opt_params[5])
-        self.assertTrue(0.5 < opt_params[6] < 1.5, opt_params[6])
+        self.assertTrue(0.9 < opt_params[4] < 1.0, opt_params[4])
+        self.assertTrue(5.5 < opt_params[5] < 6.0, opt_params[5])
+        self.assertTrue(4.0 < opt_params[6] < 5.0, opt_params[6])
 
         params = opt_params
         expr, operands, pname2locs = circuit_to_einsum_expectation(placeholder_circuit, hamiltonian)

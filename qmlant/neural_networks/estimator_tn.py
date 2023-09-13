@@ -242,6 +242,10 @@ class EstimatorTN:
             raise RuntimeError("call forward before backward")
 
         expr, operands = self._check_expr_and_operands(expr, operands)
+        if not isinstance(operands, list):
+            raise NotImplementedError(
+                f"`operands` with type:{type(operands)} is currently not supported."
+            )
         expr, operands = self._prepare_backward_circuit(expr, operands)
 
         pname2theta = self.make_pname2theta(self._params)

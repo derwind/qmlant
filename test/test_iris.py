@@ -10,10 +10,10 @@ from collections.abc import Sequence
 import cupy as cp
 import numpy as np
 import torch
-from torchvision import transforms
 from cuquantum import contract
 from qiskit import QuantumCircuit
 from torch.utils.data import DataLoader, Dataset
+from torchvision import transforms
 
 from qmlant import optim
 from qmlant.datasets import Iris
@@ -56,8 +56,8 @@ class PQCTrainerTN:  # pylint: disable=too-few-public-methods
 
         for _ in range(epochs):
             for batch, label in dataloader:
-                batch, label = self._preprocess_batch(batch, label)
-                label = label.reshape(label.shape[0], -1)
+                batch, label = self._preprocess_batch(batch, label)  # noqa: PLW2901
+                label = label.reshape(label.shape[0], -1)  # noqa: PLW2901
 
                 # "forward"
                 expvals, expr, oprands = qnn.forward_with_tn(params, expr, oprands, batch)
@@ -108,8 +108,8 @@ class PQCTrainerTN2(PQCTrainerTN):  # pylint: disable=too-few-public-methods
 
         for _ in range(epochs):
             for batch, label in dataloader:
-                batch, label = self._preprocess_batch(batch, label)
-                label = label.reshape(label.shape[0], -1)
+                batch, label = self._preprocess_batch(batch, label)  # noqa: PLW2901
+                label = label.reshape(label.shape[0], -1)  # noqa: PLW2901
 
                 # "forward"
                 expvals = qnn.forward(params, batch)
@@ -203,8 +203,8 @@ class TestIrus(unittest.TestCase):
         placeholder_circuit = TTN.make_placeholder_circuit(n_qubits)
         hamiltonian = TTN.get_hamiltonian(n_qubits)
 
-        np.random.seed(10)
-        init = np.random.random(length) * 2 * math.pi
+        rng = np.random.Generator(10)
+        init = rng.random.random(length) * 2 * math.pi
 
         opt_params, loss_list = RunPQCTrain(
             PQCTrainerTN, trainset, 64, placeholder_circuit, hamiltonian, init=init, epochs=100
@@ -234,7 +234,7 @@ class TestIrus(unittest.TestCase):
         total_correct = 0
 
         for batch, label in testloader:
-            batch, label = batch.detach().numpy(), label.detach().numpy()
+            batch, label = batch.detach().numpy(), label.detach().numpy()  # noqa: PLW2901
 
             pname2theta_list = {
                 f"x[{i}]": batch[:, i].flatten().tolist() for i in range(batch.shape[1])
@@ -286,8 +286,8 @@ class TestIrus(unittest.TestCase):
         placeholder_circuit = TTN.make_placeholder_circuit(n_qubits)
         hamiltonian = TTN.get_hamiltonian(n_qubits)
 
-        np.random.seed(10)
-        init = np.random.random(length) * 2 * math.pi
+        rng = np.random.Generator(10)
+        init = rng.random.random(length) * 2 * math.pi
 
         opt_params, loss_list = RunPQCTrain(
             PQCTrainerTN2, trainset, 64, placeholder_circuit, hamiltonian, init=init, epochs=100
@@ -317,7 +317,7 @@ class TestIrus(unittest.TestCase):
         total_correct = 0
 
         for batch, label in testloader:
-            batch, label = batch.detach().numpy(), label.detach().numpy()
+            batch, label = batch.detach().numpy(), label.detach().numpy()  # noqa: PLW2901
 
             pname2theta_list = {
                 f"x[{i}]": batch[:, i].flatten().tolist() for i in range(batch.shape[1])

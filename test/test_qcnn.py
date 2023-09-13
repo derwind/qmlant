@@ -10,11 +10,7 @@ from qiskit import QuantumCircuit
 from qiskit.circuit import ParameterVector
 
 from qmlant.models.binary_classification import SimpleQCNN
-from qmlant.neural_networks import (
-    Ry_Rydag,
-    Rz_Rzdag,
-    circuit_to_einsum_expectation,
-)
+from qmlant.neural_networks import Ry_Rydag, Rz_Rzdag, circuit_to_einsum_expectation
 
 
 class TestQCNN(unittest.TestCase):

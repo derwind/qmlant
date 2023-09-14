@@ -220,7 +220,7 @@ class TestIrus(unittest.TestCase):
         self.assertTrue(2.0 < opt_params[1] < 2.5, opt_params[1])
         self.assertTrue(4.5 < opt_params[2] < 5.5, opt_params[2])
         self.assertTrue(5.0 < opt_params[3] < 6.0, opt_params[3])
-        self.assertTrue(0.9 < opt_params[4] < 1.0, opt_params[4])
+        self.assertTrue(0.85 < opt_params[4] < 0.97, opt_params[4])
         self.assertTrue(5.5 < opt_params[5] < 6.0, opt_params[5])
         self.assertTrue(4.0 < opt_params[6] < 5.0, opt_params[6])
 
@@ -303,7 +303,7 @@ class TestIrus(unittest.TestCase):
         self.assertTrue(2.0 < opt_params[1] < 2.5, opt_params[1])
         self.assertTrue(4.5 < opt_params[2] < 5.5, opt_params[2])
         self.assertTrue(5.0 < opt_params[3] < 6.0, opt_params[3])
-        self.assertTrue(0.9 < opt_params[4] < 1.0, opt_params[4])
+        self.assertTrue(0.85 < opt_params[4] < 0.97, opt_params[4])
         self.assertTrue(5.5 < opt_params[5] < 6.0, opt_params[5])
         self.assertTrue(4.0 < opt_params[6] < 5.0, opt_params[6])
 

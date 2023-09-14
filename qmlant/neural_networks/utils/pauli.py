@@ -159,6 +159,115 @@ def Rz_Rzdag(
 
 
 @overload
+def Rxx_Rxxdag(  # type: ignore
+    theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=..., dtype=...
+) -> tuple[np.ndarray, np.ndarray] | tuple[cp.ndarray, cp.ndarray]:
+    ...
+
+
+@overload
+def Rxx_Rxxdag(theta: float, mat: cp.ndarray = ..., mat_dag: cp.ndarray = ..., xp=..., dtype=...) -> None:
+    ...
+
+
+def Rxx_Rxxdag(
+    theta: float, mat: cp.ndarray | None = None, mat_dag: cp.ndarray | None = None, xp=cp, dtype=complex
+) -> tuple[np.ndarray | cp.ndarray, np.ndarray | cp.ndarray] | None:
+    cos = np.cos(theta / 2)
+    sin = np.sin(theta / 2)
+    if mat is None or mat_dag is None:
+        rxx_rxxdag = xp.array([
+            [
+                [
+                    [[cos, 0], [0, -sin*1j]],
+                    [[0, cos], [-sin*1j, 0]]
+                ],
+                [
+                    [[0, -sin*1j], [cos, 0]],
+                    [[-sin*1j, 0], [0, cos]]
+                ],
+            ],
+            [
+                [
+                    [[cos, 0], [0, sin*1j]],
+                    [[0, cos], [sin*1j, 0]]
+                ],
+                [
+                    [[0, sin*1j], [cos, 0]],
+                    [[sin*1j, 0], [0, cos]]
+                ],
+            ],
+        ], dtype=dtype)
+        return rxx_rxxdag[0], rxx_rxxdag[1]
+
+    mat[0][0][0][0] = mat[0][0][1][1] = mat[0][1][1][0] = mat[0][1][1][1] = mat_dag[0][0][0][0] = mat_dag[0][0][1][1] = mat_dag[0][1][1][0] = mat_dag[0][1][1][1] = cos
+    mat[0][0][1][1] = mat[0][1][1][0] = mat[1][0][0][1] = mat[1][1][0][0] = -sin * 1.0j
+    mat_dag[0][0][1][1] = mat_dag[0][1][1][0] = mat_dag[1][0][0][1] = mat_dag[1][1][0][0] = sin * 1.0j
+
+    mat[0][0][0][1] = mat[0][0][1][0] = mat[0][1][0][0] = mat[0][1][1][1] = \
+    mat[1][0][0][0] = mat[1][0][1][1] = mat[1][1][0][1] = mat[1][1][1][0] = \
+    mat_dag[0][0][0][1] = mat_dag[0][0][1][0] = mat_dag[0][1][0][0] = mat_dag[0][1][1][1] = \
+    mat_dag[1][0][0][0] = mat_dag[1][0][1][1] = mat_dag[1][1][0][1] = mat_dag[1][1][1][0] = 0
+    return None
+
+
+@overload
+def Ryy_Ryydag(  # type: ignore
+    theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=..., dtype=...
+) -> tuple[np.ndarray, np.ndarray] | tuple[cp.ndarray, cp.ndarray]:
+    ...
+
+
+@overload
+def Ryy_Ryydag(theta: float, mat: cp.ndarray = ..., mat_dag: cp.ndarray = ..., xp=..., dtype=...) -> None:
+    ...
+
+
+def Ryy_Ryydag(
+    theta: float, mat: cp.ndarray | None = None, mat_dag: cp.ndarray | None = None, xp=cp, dtype=complex
+) -> tuple[np.ndarray | cp.ndarray, np.ndarray | cp.ndarray] | None:
+    cos = np.cos(theta / 2)
+    sin = np.sin(theta / 2)
+    if mat is None or mat_dag is None:
+        ryy_ryydag = xp.array([
+            [
+                [
+                    [[cos, 0], [0, sin*1j]],
+                    [[0, cos], [-sin*1j, 0]]
+                ],
+                [
+                    [[0, -sin*1j], [cos, 0]],
+                    [[sin*1j, 0], [0, cos]]
+                ],
+            ],
+            [
+                [
+                    [[cos, 0], [0, -sin*1j]],
+                    [[0, cos], [sin*1j, 0]]
+                ],
+                [
+                    [[0, sin*1j], [cos, 0]],
+                    [[-sin*1j, 0], [0, cos]]
+                ],
+            ],
+        ], dtype=dtype)
+        return ryy_ryydag[0], ryy_ryydag[1]
+
+    mat[0][0][0][0] = mat[0][0][1][1] = mat[0][1][1][0] = mat[0][1][1][1] = mat_dag[0][0][0][0] = mat_dag[0][0][1][1] = mat_dag[0][1][1][0] = mat_dag[0][1][1][1] = cos
+
+
+
+    mat[0][1][1][0] = mat[1][0][0][1] = mat_dag[0][0][1][1] = mat_dag[1][1][0][0] = -sin * 1.0j
+    mat[0][0][1][1] = mat[1][1][0][0] = mat_dag[0][1][1][0] = mat_dag[1][0][0][1] =  sin * 1.0j
+
+    mat[0][0][0][1] = mat[0][0][1][0] = mat[0][1][0][0] = mat[0][1][1][1] = \
+    mat[1][0][0][0] = mat[1][0][1][1] = mat[1][1][0][1] = mat[1][1][1][0] = \
+    mat_dag[0][0][0][1] = mat_dag[0][0][1][0] = mat_dag[0][1][0][0] = mat_dag[0][1][1][1] = \
+    mat_dag[1][0][0][0] = mat_dag[1][0][1][1] = mat_dag[1][1][0][1] = mat_dag[1][1][1][0] = 0
+    return None
+
+
+@overload
 def Rzz_Rzzdag(  # type: ignore
     theta: float, mat: Literal[None] = ..., mat_dag: Literal[None] = ..., xp=..., dtype=...
 ) -> tuple[np.ndarray, np.ndarray] | tuple[cp.ndarray, cp.ndarray]:
@@ -176,19 +285,28 @@ def Rzz_Rzzdag(
     cos = np.cos(theta / 2)
     sin = np.sin(theta / 2)
     if mat is None or mat_dag is None:
-        rzz_rzzdag = xp.array(
+        rzz_rzzdag = xp.array([
             [
                 [
-                    [[[cos - sin * 1j, 0], [0, 0]], [[0, cos + sin * 1j], [0, 0]]],
-                    [[[0, 0], [cos + sin * 1j, 0]], [[0, 0], [0, cos - sin * 1j]]],
+                    [[cos - sin * 1j, 0], [0, 0]],
+                    [[0, cos + sin * 1j], [0, 0]]
                 ],
                 [
-                    [[[cos + sin * 1j, 0], [0, 0]], [[0, cos - sin * 1j], [0, 0]]],
-                    [[[0, 0], [cos - sin * 1j, 0]], [[0, 0], [0, cos + sin * 1j]]],
+                    [[0, 0], [cos + sin * 1j, 0]],
+                    [[0, 0], [0, cos - sin * 1j]]
                 ],
             ],
-            dtype=dtype,
-        )
+            [
+                [
+                    [[cos + sin * 1j, 0], [0, 0]],
+                    [[0, cos - sin * 1j], [0, 0]]
+                ],
+                [
+                    [[0, 0], [cos - sin * 1j, 0]],
+                    [[0, 0], [0, cos + sin * 1j]]
+                ],
+            ],
+        ], dtype=dtype)
         return rzz_rzzdag[0], rzz_rzzdag[1]
 
     mat[0][0][0][0] = mat[1][1][1][1] = mat_dag[0][1][0][1] = mat_dag[1][0][1][0] = cos - sin * 1.0j
@@ -213,8 +331,16 @@ def PauliMatrices(
         np.ndarray,
         np.ndarray,
         np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
     ]
     | tuple[
+        cp.ndarray,
+        cp.ndarray,
+        cp.ndarray,
+        cp.ndarray,
         cp.ndarray,
         cp.ndarray,
         cp.ndarray,
@@ -246,15 +372,79 @@ def PauliMatrices(
         dtype=dtype,
     )
 
+    rxx_rxxdag = xp.array(
+        [
+            [
+                [
+                    [[cos, 0], [0, sin*1j]],
+                    [[0, cos], [-sin*1j, 0]]
+                ],
+                [
+                    [[0, -sin*1j], [cos, 0]],
+                    [[sin*1j, 0], [0, cos]]
+                ],
+            ],
+            [
+                [
+                    [[cos, 0], [0, -sin*1j]],
+                    [[0, cos], [sin*1j, 0]]
+                ],
+                [
+                    [[0, sin*1j], [cos, 0]],
+                    [[-sin*1j, 0], [0, cos]]
+                ],
+            ],
+        ],
+        dtype=dtype,
+    )
+
+    ryy_ryydag = xp.array(
+        [
+            [
+                [
+                    [[cos, 0], [0, sin*1j]],
+                    [[0, cos], [-sin*1j, 0]]
+                ],
+                [
+                    [[0, -sin*1j], [cos, 0]],
+                    [[sin*1j, 0], [0, cos]]
+                ],
+            ],
+            [
+                [
+                    [[cos, 0], [0, -sin*1j]],
+                    [[0, cos], [sin*1j, 0]]
+                ],
+                [
+                    [[0, sin*1j], [cos, 0]],
+                    [[-sin*1j, 0], [0, cos]]
+                ],
+            ],
+        ],
+        dtype=dtype,
+    )
+
     rzz_rzzdag = xp.array(
         [
             [
-                [[[cos - sin * 1j, 0], [0, 0]], [[0, cos + sin * 1j], [0, 0]]],
-                [[[0, 0], [cos + sin * 1j, 0]], [[0, 0], [0, cos - sin * 1j]]],
+                [
+                    [[cos - sin * 1j, 0], [0, 0]],
+                    [[0, cos + sin * 1j], [0, 0]]
+                ],
+                [
+                    [[0, 0], [cos + sin * 1j, 0]],
+                    [[0, 0], [0, cos - sin * 1j]]
+                ],
             ],
             [
-                [[[cos + sin * 1j, 0], [0, 0]], [[0, cos - sin * 1j], [0, 0]]],
-                [[[0, 0], [cos - sin * 1j, 0]], [[0, 0], [0, cos + sin * 1j]]],
+                [
+                    [[cos + sin * 1j, 0], [0, 0]],
+                    [[0, cos - sin * 1j], [0, 0]]
+                ],
+                [
+                    [[0, 0], [cos - sin * 1j, 0]],
+                    [[0, 0], [0, cos + sin * 1j]]
+                ],
             ],
         ],
         dtype=dtype,
@@ -266,6 +456,10 @@ def PauliMatrices(
         ry_rydag[1],
         rz_rzdag[0],
         rz_rzdag[1],
+        rxx_rxxdag[0],
+        rxx_rxxdag[1],
+        ryy_ryydag[0],
+        ryy_ryydag[1],
         rzz_rzzdag[0],
         rzz_rzzdag[1],
     )

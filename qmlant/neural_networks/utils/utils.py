@@ -9,7 +9,7 @@ import numpy as np
 from cuquantum import CircuitToEinsum
 from qiskit import QuantumCircuit
 
-from .pauli import Pauli, PauliMatrices, Rx_Rxdag, Ry_Rydag, Rz_Rzdag, Rzz_Rzzdag
+from .pauli import Pauli, PauliMatrices, Rx_Rxdag, Ry_Rydag, Rz_Rzdag, Rxx_Rxxdag, Ryy_Ryydag, Rzz_Rzzdag
 
 
 class SplittedOperandsDict(TypedDict):
@@ -46,8 +46,7 @@ def circuit_to_einsum_expectation(
 
     pname2locs: dict[str, tuple[list[int], list[int], Pauli]] = {}
     for name, p in name2param.items():
-        # rx, rx_dag, ry, ry_dag, rz, rz_dag = PauliMatrices(p)
-        rx, _, ry, _, rz, _, rzz, _ = PauliMatrices(p)
+        rx, _, ry, _, rz, _, rxx, _, ryy, _, rzz, _ = PauliMatrices(p)
         # consider the possibitity of same parameters are encoded in multiple locations
         locs: list[int] = []
         dag_locs: list[int] = []
@@ -81,6 +80,14 @@ def circuit_to_einsum_expectation(
                     locs.append(i)
                     dag_locs.append(len_operands - i - 1)
                     make_paulis = Rzz_Rzzdag
+                elif cp.allclose(t, rxx):
+                    locs.append(i)
+                    dag_locs.append(len_operands - i - 1)
+                    make_paulis = Rxx_Rxxdag
+                elif cp.allclose(t, ryy):
+                    locs.append(i)
+                    dag_locs.append(len_operands - i - 1)
+                    make_paulis = Ryy_Ryydag
                 # elif cp.allclose(t, rzz_dag):
                 #     dag_locs.append(i)  # i - len(operands)
         if locs and dag_locs:

@@ -5,10 +5,14 @@ warnings.simplefilter("ignore", DeprecationWarning)
 
 import cupy as cp
 import numpy as np
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, transpile
 from qiskit.circuit import ParameterVector
-from qiskit.primitives import Estimator
+from qiskit.primitives import Estimator, Sampler
 from qiskit.quantum_info import SparsePauliOp
+from qiskit_aer import AerSimulator
+from qiskit_algorithms.minimum_eigensolvers import QAOA
+from qiskit_algorithms.optimizers import COBYLA
+from qiskit_optimization import QuadraticProgram
 
 from qmlant.models.vqe import circuit_to_einsum_expectation
 from qmlant.neural_networks.estimator_tn import EstimatorTN
@@ -156,3 +160,47 @@ class TestExpectation(unittest.TestCase):
             estimator_tn = EstimatorTN(pname2locs, expr, operands)
             expval = estimator_tn.forward(init)
             self.assertAlmostEqual(expval, answer_expval, 5)
+
+
+class TestQAOA(unittest.TestCase):
+    def test_qaoa_xy_mixer(self):
+        linear = {"q0": 4.0, "q1": 4.0, "q2": 4.0, "q3": 4.0}
+        quadratic = {
+            ("q1", "q3"): 2.0,
+            ("q2", "q3"): 2.0,
+            ("q0", "q1"): 4.0,
+            ("q0", "q2"): 4.0,
+            ("q1", "q2"): 8.0,
+        }
+
+        qubo = QuadraticProgram()
+        qubo.binary_var("q0")
+        qubo.binary_var("q1")
+        qubo.binary_var("q2")
+        qubo.binary_var("q3")
+
+        qubo.minimize(linear=linear, quadratic=quadratic)
+        qubit_op, offset = qubo.to_ising()
+
+        initial_state_circuit = QuantumCircuit(4)
+        initial_state_circuit.h(0)
+        initial_state_circuit.cx(0, 1)
+        initial_state_circuit.x(0)
+        initial_state_circuit.h(2)
+        initial_state_circuit.cx(2, 3)
+        initial_state_circuit.x(2)
+
+        sampler = Sampler()
+        optimizer = COBYLA()
+        step = 1
+        mixer = SparsePauliOp(["XXII", "YYII", "IIXX", "IIYY"], [1/2, 1/2, 1/2, 1/2])
+        qaoa = QAOA(
+            sampler,
+            optimizer,
+            reps=step,
+            initial_state=initial_state_circuit,
+            mixer=mixer,
+        )
+        result = qaoa.compute_minimum_eigenvalue(qubit_op)
+        answer = result.best_measurement["bitstring"]
+        self.assertEqual(answer, "1001")

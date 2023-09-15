@@ -9,7 +9,16 @@ import numpy as np
 from cuquantum import CircuitToEinsum
 from qiskit import QuantumCircuit
 
-from .pauli import Pauli, PauliMatrices, Rx_Rxdag, Ry_Rydag, Rz_Rzdag, Rxx_Rxxdag, Ryy_Ryydag, Rzz_Rzzdag
+from .pauli import (
+    Pauli,
+    PauliMatrices,
+    Rx_Rxdag,
+    Rxx_Rxxdag,
+    Ry_Rydag,
+    Ryy_Ryydag,
+    Rz_Rzdag,
+    Rzz_Rzzdag,
+)
 
 
 class SplittedOperandsDict(TypedDict):

@@ -99,7 +99,7 @@ class EstimatorTN:
         if isinstance(self.operands, list):
             operands = self.operands
         elif isinstance(self.operands, dict):  # SplittedOperandsDict
-            operands = self.operands["operands"]  # for complicated Hamiltonians of QAOA
+            operands = self.operands["operands"]  # for complicated Hamiltonians of SimpleQAOA
         else:
             raise ValueError(
                 f"type of operands ({type(self.operands)}) must be `list` or `SplittedOperandsDict`"

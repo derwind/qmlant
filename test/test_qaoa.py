@@ -1,5 +1,6 @@
 import unittest
 import warnings
+from collections.abc import Callable, Sequence
 
 warnings.simplefilter("ignore", DeprecationWarning)
 
@@ -163,6 +164,89 @@ class TestExpectation(unittest.TestCase):
 
 
 class TestQAOA(unittest.TestCase):
+    @staticmethod
+    def make_placeholder_circuit(
+        ising_dict: dict[tuple[str] | tuple[str, str], float],
+        n_reps: int = 1,
+        insert_barrier: bool = False,
+        dry_run: bool = False,
+    ) -> tuple[QuantumCircuit, Callable[[Sequence[float] | np.ndarray], dict[str, float]]] | int:
+        n_qubits = 4
+        param_names = []
+
+        def rzz(
+            qc: QuantumCircuit, theta: float, qubit1: int, qubit2: int, decompose: bool = False
+        ):
+            if decompose:
+                qc.cx(qubit1, qubit2)
+                qc.rz(theta, qubit2)
+                qc.cx(qubit1, qubit2)
+            else:
+                qc.rzz(theta, qubit1, qubit2)
+
+        beta = ParameterVector("β", n_qubits * n_reps)
+        gamma = ParameterVector("γ", len(ising_dict) * n_reps)
+        beta_idx = iter(range(n_qubits * n_reps))
+
+        def bi():
+            return next(beta_idx)
+
+        gamma_idx = iter(range(len(ising_dict) * n_reps))
+
+        def gi():
+            return next(gamma_idx)
+
+        qc = QuantumCircuit(4)
+        qc.h(0)
+        qc.cx(0, 1)
+        qc.x(0)
+        qc.h(2)
+        qc.cx(2, 3)
+        qc.x(2)
+
+        for _ in range(n_reps):
+            # H_P
+            for k in ising_dict:
+                if len(k) == 1:
+                    left = k[0]
+                    ln = int(left[1:])
+                    rn = None
+                elif len(k) == 2:
+                    left, right = k  # type: ignore
+                    ln = int(left[1:])
+                    rn = int(right[1:])
+                    assert ln <= rn
+                else:
+                    raise ValueError(f"len(k) = {len(k)} must be one or two.")
+
+                if rn is None:
+                    theta = gamma[gi()]
+                    param_names.append(theta.name)
+                    qc.rz(theta, ln)
+                else:
+                    theta = gamma[gi()]
+                    param_names.append(theta.name)
+                    qc.rzz(theta, ln, rn)
+
+            # H_M
+            theta = beta[bi()]
+            param_names.append(theta.name)
+            qc.rxx(theta, 0, 1)
+            theta = beta[bi()]
+            param_names.append(theta.name)
+            qc.rxx(theta, 0, 1)
+            param_names.append(theta.name)
+            qc.rxx(theta, 2, 3)
+            theta = beta[bi()]
+            param_names.append(theta.name)
+            qc.ryy(theta, 2, 3)
+            theta = beta[bi()]
+
+        def make_pname2theta(params: Sequence[float] | np.ndarray) -> dict[str, float]:
+            return dict(zip(param_names, params))
+
+        return qc, make_pname2theta
+
     def test_qaoa_xy_mixer(self):
         linear = {"q0": 4.0, "q1": 4.0, "q2": 4.0, "q3": 4.0}
         quadratic = {
@@ -193,7 +277,7 @@ class TestQAOA(unittest.TestCase):
         sampler = Sampler()
         optimizer = COBYLA()
         step = 1
-        mixer = SparsePauliOp(["XXII", "YYII", "IIXX", "IIYY"], [1/2, 1/2, 1/2, 1/2])
+        mixer = SparsePauliOp(["XXII", "YYII", "IIXX", "IIYY"], [1 / 2, 1 / 2, 1 / 2, 1 / 2])
         qaoa = QAOA(
             sampler,
             optimizer,

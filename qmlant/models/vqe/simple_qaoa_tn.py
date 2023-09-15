@@ -10,7 +10,7 @@ from qiskit.circuit import ParameterVector
 from .utils import _calc_num_qubits
 
 
-class QAOA:
+class SimpleQAOA:
     @overload
     @classmethod
     def make_placeholder_circuit(
@@ -41,7 +41,7 @@ class QAOA:
         insert_barrier: bool = False,
         dry_run: bool = False,
     ) -> tuple[QuantumCircuit, Callable[[Sequence[float] | np.ndarray], dict[str, float]]] | int:
-        """make a QAOA quantum circuit
+        """make a SimpleQAOA quantum circuit
 
         A Quantum Approximate Optimization Algorithm.
         Edward Farhi, Jeffrey Goldstone, Sam Gutmann. A Quantum Approximate Optimization Algorithm. arXiv:1411.4028

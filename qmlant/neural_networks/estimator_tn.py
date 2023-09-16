@@ -193,15 +193,17 @@ class EstimatorTN:
         self, forward_expr: str, forward_operands: list[cp.ndarray], param_symbol: str = "孕"
     ) -> tuple[str, list[cp.ndarray]]:
         # ansatz portion only
-        pname2locs: dict[str, set[int]] = {
-            pname: set(locs + dag_locs)
-            for pname, (locs, dag_locs, _) in self.pname2locs.items()
-            if not pname.startswith("x")  # "θ[i]" etc.
-        }
+        pname2locs: dict[str, set[int]] = {}
+        for pname, pauli2locs in self.pname2locs.items():
+            if not pname.startswith("x"):  # "θ[i]" etc.
+                total_locs: set[int] = set()
+                for locs, dag_locs in pauli2locs.values():
+                    total_locs |= set(locs + dag_locs)
+                pname2locs[pname] = total_locs
         n_params = len(pname2locs)
         param_locs: set[int] = set()
-        for locs in pname2locs.values():
-            param_locs.update(locs)
+        for locs_ in pname2locs.values():
+            param_locs.update(locs_)
 
         ins, out = re.split(r"\s*->\s*", forward_expr)
         ins = re.split(r"\s*,\s*", ins)

@@ -8,6 +8,8 @@ from qmlant.neural_networks.utils import (
     Identity,
     MatZero,
     ParameterName2Locs,
+    Pauli,
+    PauliLocs,
     PauliZ,
     SplittedOperandsDict,
 )
@@ -153,9 +155,12 @@ def circuit_to_einsum_expectation(
     else:
         es.insert(coefficients_loc, "食")
         # shift +1 for dag_locs due to embedding of coefficients into TN
-        for name, (locs, dag_locs, make_paulis) in pname2locs.items():
-            shifted_dag_locs = [v + 1 for v in dag_locs]
-            new_pname2locs[name] = (locs, shifted_dag_locs, make_paulis)
+        for name, pauli2locs in pname2locs.items():
+            new_pauli2locs: dict[Pauli, PauliLocs] = {}
+            for make_paulis, (locs, dag_locs) in pauli2locs.items():
+                shifted_dag_locs = [v + 1 for v in dag_locs]
+                new_pauli2locs[make_paulis] = PauliLocs(locs, shifted_dag_locs)
+            new_pname2locs[name] = new_pauli2locs
         coefficients = cp.array(coefficients, dtype=complex)
         operands.insert(coefficients_loc, coefficients)
     new_expr = ",".join(es) + "->"

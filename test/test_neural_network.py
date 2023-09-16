@@ -86,7 +86,7 @@ class TestReplacer(unittest.TestCase):
             self.ZERO,
             self.ZERO,
         ]
-        answer_params2locs = {"x[0]": ([3], [10], Ry_Rydag), "x[1]": ([5], [8], Ry_Rydag)}
+        answer_params2locs = {"x[0]": {Ry_Rydag: ([3], [10])}, "x[1]": {Ry_Rydag: ([5], [8])}}
 
         expr, operands, params2locs = circuit_to_einsum_expectation(qc, "ZZ")
         self.assertEqual(expr, answer_expr)
@@ -137,9 +137,9 @@ class TestReplacer(unittest.TestCase):
             self.ZERO,
         ]
         answer_params2locs = {
-            "x[0]": ([6, 12], [26, 20], Rz_Rzdag),
-            "x[1]": ([7, 13], [25, 19], Rz_Rzdag),
-            "x[2]": ([8, 14], [24, 18], Rz_Rzdag),
+            "x[0]": {Rz_Rzdag: ([6, 12], [26, 20])},
+            "x[1]": {Rz_Rzdag: ([7, 13], [25, 19])},
+            "x[2]": {Rz_Rzdag: ([8, 14], [24, 18])},
         }
 
         expr, operands, params2locs = circuit_to_einsum_expectation(qc, "ZZZ")
@@ -160,7 +160,7 @@ class TestReplacer(unittest.TestCase):
         qc.ry(params[1], 1)
 
         answer_expr = "a,b,ca,dc,eb,fe,gd,hf,ih,ji,kg,lk,l,j->"
-        answer_pname2locs = {"x[0]": ([3], [10], Ry_Rydag), "x[1]": ([5], [8], Ry_Rydag)}
+        answer_pname2locs = {"x[0]": {Ry_Rydag: ([3], [10])}, "x[1]": {Ry_Rydag: ([5], [8])}}
         expr, operands, pname2locs = circuit_to_einsum_expectation(qc, "ZZ")
         self.assertEqual(expr, answer_expr)
         self.assertEqual(pname2locs, answer_pname2locs)
@@ -200,7 +200,7 @@ class TestReplacer(unittest.TestCase):
         qc.ry(params[1], 1)
 
         answer_expr = "a,b,ca,dc,eb,fe,gd,hf,ih,ji,kg,lk,l,j->"
-        answer_pname2locs = {"x[0]": ([3], [10], Ry_Rydag), "x[1]": ([5], [8], Ry_Rydag)}
+        answer_pname2locs = {"x[0]": {Ry_Rydag: ([3], [10])}, "x[1]": {Ry_Rydag: ([5], [8])}}
         expr, operands, pname2locs = circuit_to_einsum_expectation(qc, "ZZ")
         self.assertEqual(expr, answer_expr)
 

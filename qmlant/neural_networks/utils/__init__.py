@@ -15,6 +15,7 @@ from .pauli import (
 )
 from .utils import (
     ParameterName2Locs,
+    PauliLocs,
     SplittedOperandsDict,
     circuit_to_einsum_expectation,
     replace_by_batch,

@@ -157,9 +157,9 @@ def circuit_to_einsum_expectation(
         # shift +1 for dag_locs due to embedding of coefficients into TN
         for name, pauli2locs in pname2locs.items():
             new_pauli2locs: dict[Pauli, PauliLocs] = {}
-            for make_paulis, (locs, dag_locs) in pauli2locs.items():
+            for make_paulis, (locs, dag_locs, coeffs) in pauli2locs.items():
                 shifted_dag_locs = [v + 1 for v in dag_locs]
-                new_pauli2locs[make_paulis] = PauliLocs(locs, shifted_dag_locs)
+                new_pauli2locs[make_paulis] = PauliLocs(locs, shifted_dag_locs, coeffs)
             new_pname2locs[name] = new_pauli2locs
         coefficients = cp.array(coefficients, dtype=complex)
         operands.insert(coefficients_loc, coefficients)

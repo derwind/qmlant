@@ -112,15 +112,15 @@ class TestQCNN(unittest.TestCase):
             self.ZERO,
         ]
         answer_params2locs = {
-            "c1[0]": {Rz_Rzdag: ([4], [44])},
-            "c1[1]": {Ry_Rydag: ([5], [43])},
-            "c1[2]": {Ry_Rydag: ([7], [41])},
-            "c1[3]": {Rz_Rzdag: ([12], [36])},
-            "c1[4]": {Ry_Rydag: ([13], [35])},
-            "c1[5]": {Ry_Rydag: ([15], [33])},
-            "p1[0]": {Rz_Rzdag: ([20], [28])},
-            "p1[1]": {Ry_Rydag: ([21], [27])},
-            "p1[2]": {Ry_Rydag: ([23], [25])},
+            "c1[0]": {Rz_Rzdag: ([4], [44], [1.0])},
+            "c1[1]": {Ry_Rydag: ([5], [43], [1.0])},
+            "c1[2]": {Ry_Rydag: ([7], [41], [1.0])},
+            "c1[3]": {Rz_Rzdag: ([12], [36], [1.0])},
+            "c1[4]": {Ry_Rydag: ([13], [35], [1.0])},
+            "c1[5]": {Ry_Rydag: ([15], [33], [1.0])},
+            "p1[0]": {Rz_Rzdag: ([20], [28], [1.0])},
+            "p1[1]": {Ry_Rydag: ([21], [27], [1.0])},
+            "p1[2]": {Ry_Rydag: ([23], [25], [1.0])},
         }
 
         self.assertEqual(expr, answer_expr)

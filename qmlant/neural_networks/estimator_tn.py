@@ -197,7 +197,7 @@ class EstimatorTN:
         for pname, pauli2locs in self.pname2locs.items():
             if not pname.startswith("x"):  # "θ[i]" etc.
                 total_locs: set[int] = set()
-                for locs, dag_locs in pauli2locs.values():
+                for locs, dag_locs, _ in pauli2locs.values():
                     total_locs |= set(locs + dag_locs)
                 pname2locs[pname] = total_locs
         n_params = len(pname2locs)

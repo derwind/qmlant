@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import cupy as cp
 import numpy as np
 from qiskit import QuantumCircuit
@@ -7,6 +9,7 @@ from qiskit import QuantumCircuit
 from qmlant.neural_networks.utils import (
     Identity,
     MatZero,
+    OperandsDict,
     ParameterName2Locs,
     Pauli,
     PauliLocs,
@@ -115,12 +118,8 @@ def circuit_to_einsum_expectation(
     prioritize_performance: bool = True,
     n_partial_hamiltonian: int = 1,
 ) -> (
-    tuple[str, list[cp.ndarray], ParameterName2Locs]
-    | tuple[
-        str,
-        SplittedOperandsDict,
-        ParameterName2Locs,
-    ]
+    tuple[str, OperandsDict, ParameterName2Locs]
+    | tuple[str, SplittedOperandsDict, ParameterName2Locs]
 ):
     """CircuitToEinsum with hamiltonian embedded for `expectation`
 
@@ -137,6 +136,9 @@ def circuit_to_einsum_expectation(
             or tuple of `operands`, list of partial hamitonian list and hamiltonian locs
         dict[str, tuple[list[int], list[int], Pauli]]: dict of parameter name to locs
     """
+
+    def make_pname2theta(params: Sequence[float] | np.ndarray) -> dict[str, float]:
+        return dict(zip([param.name for param in qc_pl.parameters], params))
 
     # TN with dummy hamiltonian
     dummy_hamiltonian = "Z" * qc_pl.num_qubits
@@ -169,7 +171,11 @@ def circuit_to_einsum_expectation(
     if n_partial_hamiltonian <= 1:
         for ham, locs in zip(hamiltonian, hamiltonian_locs):  # type: ignore
             operands[locs] = ham  # type: ignore
-        new_operands = _convert_dtype(operands, prioritize_performance)  # for better performance
+        operands_ = _convert_dtype(operands, prioritize_performance)  # for better performance
+        new_operands: SplittedOperandsDict = {  # type: ignore
+            "operands": operands_,
+            "make_pname2theta": make_pname2theta,
+        }
     else:
         operands_ = _convert_dtype(operands, prioritize_performance)  # for better performance
         # split hamiltonian into partial Hamiltonians in order to prevent VRAM overflow
@@ -195,6 +201,7 @@ def circuit_to_einsum_expectation(
 
         new_operands: SplittedOperandsDict = {  # type: ignore
             "operands": operands_,
+            "make_pname2theta": make_pname2theta,
             "partial_hamiltonian_list": partial_hamiltonian_list,
             "hamiltonian_locs": hamiltonian_locs,
             "coefficients_list": coefficients_list,

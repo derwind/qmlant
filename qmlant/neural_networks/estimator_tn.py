@@ -44,16 +44,15 @@ class EstimatorTN:
         pname2locs: ParameterName2Locs,
         expr: str | None = None,
         operands: list[cp.ndarray] | SplittedOperandsDict | None = None,
-        make_pname2theta: Callable[
-            [Sequence[float] | np.ndarray], dict[str, float]
-        ] = default_make_pname2theta,
         batch_filter: Callable[[np.ndarray], np.ndarray] = default_batch_filter,
         memory_limit: int | str = r"80%",
     ):
         self.pname2locs = pname2locs
         self.expr = expr
         self.operands = operands
-        self.make_pname2theta = make_pname2theta
+        self.make_pname2theta = default_make_pname2theta
+        if isinstance(self.operands, dict):  # OperandsDict, SplittedOperandsDict
+            self.make_pname2theta = self.operands["make_pname2theta"]  # type: ignore
         self.batch_filter = batch_filter
         self.memory_limit = memory_limit
         self._params: Sequence[float] | np.ndarray | None = None  # cache params of forward
@@ -98,7 +97,7 @@ class EstimatorTN:
 
         if isinstance(self.operands, list):
             operands = self.operands
-        elif isinstance(self.operands, dict):  # SplittedOperandsDict
+        elif isinstance(self.operands, dict):  # OperandsDict, SplittedOperandsDict
             operands = self.operands["operands"]  # for complicated Hamiltonians of SimpleQAOA
         else:
             raise ValueError(
@@ -107,29 +106,32 @@ class EstimatorTN:
         self.expr, operands = self._prepare_circuit(params, self.expr, operands, batch)
         if isinstance(self.operands, list):
             self.operands = operands
-        else:  # SplittedOperandsDict
+        else:  # OperandsDict, SplittedOperandsDict
             self.operands["operands"] = operands
         self._params = params
 
         if isinstance(self.operands, list):
             self._last_forward = cp.asnumpy(contract(self.expr, *operands).real.reshape(-1, 1))
-        elif isinstance(self.operands, dict):  # SplittedOperandsDict
-            partial_hamiltonian_list = self.operands["partial_hamiltonian_list"]
-            hamiltonian_locs = self.operands["hamiltonian_locs"]
-            coefficients_list = self.operands["coefficients_list"]
-            coefficients_loc = self.operands["coefficients_loc"]
+        elif isinstance(self.operands, dict):  # OperandsDict, SplittedOperandsDict
+            if "partial_hamiltonian_list" not in self.operands:
+                self._last_forward = cp.asnumpy(contract(self.expr, *operands).real.reshape(-1, 1))
+            else:
+                partial_hamiltonian_list = self.operands["partial_hamiltonian_list"]
+                hamiltonian_locs = self.operands["hamiltonian_locs"]
+                coefficients_list = self.operands["coefficients_list"]
+                coefficients_loc = self.operands["coefficients_loc"]
 
-            self._last_forward = 0  # type: ignore
-            for i, partial_hamiltonian in enumerate(partial_hamiltonian_list):
-                for ham, locs in zip(partial_hamiltonian, hamiltonian_locs):
-                    operands[locs] = ham
-                if coefficients_loc is not None and coefficients_list is not None:
-                    operands[coefficients_loc] = coefficients_list[i]
-                self._last_forward += cp.asnumpy(
-                    contract(
-                        self.expr, *operands, options={"memory_limit": self.memory_limit}
-                    ).real.reshape(-1, 1)
-                )
+                self._last_forward = 0  # type: ignore
+                for i, partial_hamiltonian in enumerate(partial_hamiltonian_list):
+                    for ham, locs in zip(partial_hamiltonian, hamiltonian_locs):
+                        operands[locs] = ham
+                    if coefficients_loc is not None and coefficients_list is not None:
+                        operands[coefficients_loc] = coefficients_list[i]
+                    self._last_forward += cp.asnumpy(
+                        contract(
+                            self.expr, *operands, options={"memory_limit": self.memory_limit}
+                        ).real.reshape(-1, 1)
+                    )
         else:
             raise ValueError(
                 f"type of operands ({type(self.operands)}) must be `list` or `SplittedOperandsDict`"

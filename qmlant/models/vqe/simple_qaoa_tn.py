@@ -40,7 +40,7 @@ class SimpleQAOA:
         n_reps: int = 1,
         insert_barrier: bool = False,
         dry_run: bool = False,
-    ) -> tuple[QuantumCircuit, Callable[[Sequence[float] | np.ndarray], dict[str, float]]] | int:
+    ) -> QuantumCircuit | int:
         """make a SimpleQAOA quantum circuit
 
         A Quantum Approximate Optimization Algorithm.
@@ -118,7 +118,4 @@ class SimpleQAOA:
             if insert_barrier:
                 qc.barrier()
 
-        def make_pname2theta(params: Sequence[float] | np.ndarray) -> dict[str, float]:
-            return dict(zip(param_names, params))
-
-        return qc, make_pname2theta
+        return qc

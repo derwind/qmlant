@@ -14,6 +14,7 @@ from .pauli import (
     Rz_Rzdag,
 )
 from .utils import (
+    OperandsDict,
     ParameterName2Locs,
     PauliLocs,
     SplittedOperandsDict,

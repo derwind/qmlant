@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import NamedTuple, TypedDict
 
 import cupy as cp
@@ -21,8 +21,12 @@ from .pauli import (
 )
 
 
-class SplittedOperandsDict(TypedDict):
+class OperandsDict(TypedDict):
     operands: list[cp.ndarray]
+    make_pname2theta: Callable[[Sequence[float] | np.ndarray], dict[str, float]]
+
+
+class SplittedOperandsDict(OperandsDict):
     partial_hamiltonian_list: tuple[tuple[cp.ndarray]]
     hamiltonian_locs: list[int]
     coefficients_list: tuple[cp.ndarray] | None

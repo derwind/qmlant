@@ -182,7 +182,6 @@ def circuit_to_einsum_expectation(
             for make_paulis, (locs, dag_locs, coeffs) in pauli2locs.items():
                 shifted_dag_locs = [v + 1 for v in dag_locs]
                 new_pauli2locs[make_paulis] = PauliLocs(locs, shifted_dag_locs, coeffs)
-                print(make_paulis, dag_locs, shifted_dag_locs)
             new_pname2locs[name] = new_pauli2locs
         coefficients = cp.array(coefficients, dtype=complex)
         operands.insert(coefficients_loc, coefficients)
@@ -190,7 +189,9 @@ def circuit_to_einsum_expectation(
         # update pname2locs (especially `PauliLocs.coefficients`)
         pauli_str2coeff = make_pauli_str2coeff(hamiltonian, coefficients)
         char2qubits = make_char2qubits(expr, operands, min(hamiltonian_locs))
-        new_pname2locs = update_pname2locs(expr, char2qubits, pauli_str2coeff, pname2locs)
+        new_pname2locs = update_pname2locs(
+            expr, qc_pl.num_qubits, char2qubits, pauli_str2coeff, new_pname2locs
+        )
 
     new_expr = ",".join(es) + "->"
 
@@ -240,6 +241,7 @@ def circuit_to_einsum_expectation(
 
 def update_pname2locs(
     expr: str,
+    n_qubits: int,
     char2qubits: dict[str, int],
     pauli_str2coeff: dict[str, float],
     pname2locs: ParameterName2Locs,
@@ -252,7 +254,7 @@ def update_pname2locs(
                 for i, loc in enumerate(locs):
                     c0 = list(indices[loc])[0]  # "d", "ea", "fgbe" etc.
                     qubit0 = char2qubits[c0]
-                    pauli_str = ["I"] * 4
+                    pauli_str = ["I"] * n_qubits
                     pauli_str[qubit0] = "Z"
                     pauli_str_ = "".join(pauli_str)
                     updated_coeff = pauli_str2coeff[pauli_str_] * 2
@@ -262,7 +264,7 @@ def update_pname2locs(
                     c1, c0 = list(indices[loc])[:2]  # "d", "ea", "fgbe" etc.
                     qubit0 = char2qubits[c0]
                     qubit1 = char2qubits[c1]
-                    pauli_str = ["I"] * 4
+                    pauli_str = ["I"] * n_qubits
                     pauli_str[qubit0] = pauli_str[qubit1] = "Z"
                     pauli_str_ = "".join(pauli_str)
                     updated_coeff = pauli_str2coeff[pauli_str_] * 2

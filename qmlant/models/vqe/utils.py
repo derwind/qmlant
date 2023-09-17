@@ -80,7 +80,7 @@ class HamiltonianConverter:
         """get Hamiltonian array and coefficients for `a_{12} Z_1 Z_2 + a_{34} Z_3 Z_4` etc.
 
         Returns:
-            tuple[list[cp.array]: Hamiltonian array, e.g., Z_1 Z_2 + Z_3 Z_4
+            tuple[list[cp.ndarray]]: Hamiltonian array, e.g., Z_1 Z_2 + Z_3 Z_4
             np.ndarray: Hamiltonian coefficients, e.g. [a_{12}, a_{34}]
         """
 
@@ -109,6 +109,24 @@ class HamiltonianConverter:
             hamiltonian.append(cp.array(row))
 
         return hamiltonian, np.array(list(self._ising_dict.values()))
+
+    @staticmethod
+    def to_pauli_strings(hamiltonian: tuple[list[cp.ndarray]]):
+        I = Identity(xp=cp)  # noqa: E741
+        Z = PauliZ(xp=cp)
+
+        pauli_strings: list[str] = []
+        for ham in zip(*hamiltonian):
+            pauli_str = ""
+            for h in ham:
+                if cp.allclose(h, I):
+                    pauli_str += "I"
+                elif cp.allclose(h, Z):
+                    pauli_str += "Z"
+                else:
+                    raise ValueError(f"{h} must be I or Z.")
+            pauli_strings.append(pauli_str)
+        return pauli_strings
 
 
 def circuit_to_einsum_expectation(

@@ -371,22 +371,22 @@ def PauliMatrices(
         [
             [
                 [
-                    [[cos, 0], [0, sin*1j]],
+                    [[cos, 0], [0, -sin*1j]],
                     [[0, cos], [-sin*1j, 0]]
                 ],
                 [
                     [[0, -sin*1j], [cos, 0]],
-                    [[sin*1j, 0], [0, cos]]
+                    [[-sin*1j, 0], [0, cos]]
                 ],
             ],
             [
                 [
-                    [[cos, 0], [0, -sin*1j]],
+                    [[cos, 0], [0, sin*1j]],
                     [[0, cos], [sin*1j, 0]]
                 ],
                 [
                     [[0, sin*1j], [cos, 0]],
-                    [[-sin*1j, 0], [0, cos]]
+                    [[sin*1j, 0], [0, cos]]
                 ],
             ],
         ],

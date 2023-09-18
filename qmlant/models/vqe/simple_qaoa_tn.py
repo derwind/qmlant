@@ -60,7 +60,7 @@ class SimpleQAOA:
         param_names = []
 
         if dry_run:
-            length_ansatz = (n_qubits + len(ising_dict)) * n_reps
+            length_ansatz = 2 * n_reps
             return length_ansatz
 
         def rzz(
@@ -73,14 +73,14 @@ class SimpleQAOA:
             else:
                 qc.rzz(theta, qubit1, qubit2)
 
-        beta = ParameterVector("β", n_qubits * n_reps)
-        gamma = ParameterVector("γ", len(ising_dict) * n_reps)
-        beta_idx = iter(range(n_qubits * n_reps))
+        betas = ParameterVector("β", n_reps)
+        beta_idx = iter(range(n_reps))
 
         def bi():
             return next(beta_idx)
 
-        gamma_idx = iter(range(len(ising_dict) * n_reps))
+        gammas = ParameterVector("γ", n_reps)
+        gamma_idx = iter(range(n_reps))
 
         def gi():
             return next(gamma_idx)
@@ -88,6 +88,10 @@ class SimpleQAOA:
         qc = QuantumCircuit(n_qubits)
         qc.h(qc.qregs[0][:])
         for _ in range(n_reps):
+            # H_P
+            gamma = gammas[gi()]
+            param_names.append(gamma.name)
+
             for k in ising_dict:
                 if len(k) == 1:
                     left = k[0]
@@ -102,19 +106,19 @@ class SimpleQAOA:
                     raise ValueError(f"len(k) = {len(k)} must be one or two.")
 
                 if rn is None:
-                    theta = gamma[gi()]
-                    param_names.append(theta.name)
-                    qc.rz(theta, ln)
+                    qc.rz(gamma, ln)
                 else:
-                    theta = gamma[gi()]
-                    param_names.append(theta.name)
-                    rzz(qc, theta, ln, rn)
+                    rzz(qc, gamma, ln, rn)
+
             if insert_barrier:
                 qc.barrier()
+
+            # H_M
+            beta = betas[bi()]
+            param_names.append(beta.name)
+
             for i in range(n_qubits):
-                theta = beta[bi()]
-                param_names.append(theta.name)
-                qc.rx(theta, i)
+                qc.rx(beta, i)
             if insert_barrier:
                 qc.barrier()
 

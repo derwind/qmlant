@@ -200,7 +200,7 @@ def Rxx_Rxxdag(
         ], dtype=dtype)
         return rxx_rxxdag[0], rxx_rxxdag[1]
 
-    mat[0][0][0][0] = mat[0][0][1][1] = mat[0][1][1][0] = mat[0][1][1][1] = mat_dag[0][0][0][0] = mat_dag[0][0][1][1] = mat_dag[0][1][1][0] = mat_dag[0][1][1][1] = cos
+    mat[0][0][0][0] = mat[0][1][0][1] = mat[1][0][1][0] = mat[1][1][1][1] = mat_dag[0][0][0][0] = mat_dag[0][1][0][1] = mat_dag[1][0][1][0] = mat_dag[1][1][1][1] = cos
     mat[0][0][1][1] = mat[0][1][1][0] = mat[1][0][0][1] = mat[1][1][0][0] = -sin * 1.0j
     mat_dag[0][0][1][1] = mat_dag[0][1][1][0] = mat_dag[1][0][0][1] = mat_dag[1][1][0][0] = sin * 1.0j
     mat[0][0][0][1] = mat[0][0][1][0] = mat[0][1][0][0] = mat[0][1][1][1] = \
@@ -252,7 +252,7 @@ def Ryy_Ryydag(
         ], dtype=dtype)
         return ryy_ryydag[0], ryy_ryydag[1]
 
-    mat[0][0][0][0] = mat[0][0][1][1] = mat[0][1][1][0] = mat[0][1][1][1] = mat_dag[0][0][0][0] = mat_dag[0][0][1][1] = mat_dag[0][1][1][0] = mat_dag[0][1][1][1] = cos
+    mat[0][0][0][0] = mat[0][1][0][1] = mat[1][0][1][0] = mat[1][1][1][1] = mat_dag[0][0][0][0] = mat_dag[0][1][0][1] = mat_dag[1][0][1][0] = mat_dag[1][1][1][1] = cos
     mat[0][1][1][0] = mat[1][0][0][1] = mat_dag[0][0][1][1] = mat_dag[1][1][0][0] = -sin * 1.0j
     mat[0][0][1][1] = mat[1][1][0][0] = mat_dag[0][1][1][0] = mat_dag[1][0][0][1] =  sin * 1.0j
     mat[0][0][0][1] = mat[0][0][1][0] = mat[0][1][0][0] = mat[0][1][1][1] = \
@@ -371,22 +371,22 @@ def PauliMatrices(
         [
             [
                 [
-                    [[cos, 0], [0, sin*1j]],
+                    [[cos, 0], [0, -sin*1j]],
                     [[0, cos], [-sin*1j, 0]]
                 ],
                 [
                     [[0, -sin*1j], [cos, 0]],
-                    [[sin*1j, 0], [0, cos]]
+                    [[-sin*1j, 0], [0, cos]]
                 ],
             ],
             [
                 [
-                    [[cos, 0], [0, -sin*1j]],
+                    [[cos, 0], [0, sin*1j]],
                     [[0, cos], [sin*1j, 0]]
                 ],
                 [
                     [[0, sin*1j], [cos, 0]],
-                    [[-sin*1j, 0], [0, cos]]
+                    [[sin*1j, 0], [0, cos]]
                 ],
             ],
         ],

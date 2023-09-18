@@ -8,10 +8,13 @@ from .pauli import (
     PauliZ,
     Rx,
     Rx_Rxdag,
+    Rxx_Rxxdag,
     Ry,
     Ry_Rydag,
+    Ryy_Ryydag,
     Rz,
     Rz_Rzdag,
+    Rzz_Rzzdag,
 )
 from .utils import (
     OperandsDict,

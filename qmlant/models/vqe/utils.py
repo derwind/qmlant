@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 from collections.abc import Sequence
 
 import cupy as cp
@@ -19,6 +20,7 @@ from qmlant.neural_networks.utils import (
 from qmlant.neural_networks.utils import (
     circuit_to_einsum_expectation as nnu_circuit_to_einsum_expectation,
 )
+from qmlant.neural_networks.utils.pauli import Rz_Rzdag, Rzz_Rzzdag
 
 
 class IsingConverter:
@@ -111,7 +113,7 @@ class HamiltonianConverter:
         return hamiltonian, np.array(list(self._ising_dict.values()))
 
     @staticmethod
-    def to_pauli_strings(hamiltonian: tuple[list[cp.ndarray]]):
+    def to_pauli_strings(hamiltonian: list[cp.ndarray]):
         I = Identity(xp=cp)  # noqa: E741
         Z = PauliZ(xp=cp)
 
@@ -129,10 +131,17 @@ class HamiltonianConverter:
         return pauli_strings
 
 
+class QAOAMixer(enum.IntEnum):
+    NONE = 0
+    X_MIXER = enum.auto()
+    XY_MIXER = enum.auto()
+
+
 def circuit_to_einsum_expectation(
     qc_pl: QuantumCircuit,
     hamiltonian: list[cp.ndarray],
     coefficients: np.ndarray | None = None,
+    qaoa_mixer: QAOAMixer = QAOAMixer.NONE,
     prioritize_performance: bool = True,
     n_partial_hamiltonian: int = 1,
 ) -> (
@@ -145,6 +154,8 @@ def circuit_to_einsum_expectation(
         qc_pl (QuantumCircuit): placeholder `QuantumCircuit` with `ParameterVector`
         hamiltonian (list[cp.ndarray]): Hamiltonian list
         coefficients (np.ndarray | None): coefficients of Hamiltonian
+        is_qaoa (bool): set `True` if QAOA circuit
+        prioritize_performance (bool): use `np.complex64` instead of `np.complex128`
         n_partial_hamiltonian (int): III+IIZ, IZI,ZII, ZIZ+ZZI for
             III + IIZ + IZI + ZII + ZIZ + ZZI if n_partial_hamiltonian = 2
 
@@ -173,6 +184,7 @@ def circuit_to_einsum_expectation(
     if coefficients is None:
         new_pname2locs = pname2locs
     else:
+        # update TN
         es.insert(coefficients_loc, "食")
         # shift +1 for dag_locs due to embedding of coefficients into TN
         for name, pauli2locs in pname2locs.items():
@@ -183,6 +195,16 @@ def circuit_to_einsum_expectation(
             new_pname2locs[name] = new_pauli2locs
         coefficients = cp.array(coefficients, dtype=complex)
         operands.insert(coefficients_loc, coefficients)
+
+        if qaoa_mixer != QAOAMixer.NONE:
+            # update pname2locs (especially `PauliLocs.coefficients`)
+            # according to coefficients of the problem Hamiltonian
+            pauli_str2coeff = _make_pauli_str2coeff(hamiltonian, coefficients)
+            char2qubits = _make_char2qubits(expr, operands, min(hamiltonian_locs))
+            new_pname2locs = _update_pname2locs(
+                expr, qc_pl.num_qubits, char2qubits, pauli_str2coeff, qaoa_mixer, new_pname2locs
+            )
+
     new_expr = ",".join(es) + "->"
 
     # update operands with real hamiltonian
@@ -227,6 +249,85 @@ def circuit_to_einsum_expectation(
         }
 
     return new_expr, new_operands, new_pname2locs
+
+
+def _update_pname2locs(
+    expr: str,
+    n_qubits: int,
+    char2qubits: dict[str, int],
+    pauli_str2coeff: dict[str, float],
+    qaoa_mixer: QAOAMixer,
+    pname2locs: ParameterName2Locs,
+) -> ParameterName2Locs:
+    indices = expr.split("->")[0].split(",")
+
+    for _, pauli_locs in pname2locs.items():
+        for op, (locs, _, pauli_coefficients) in pauli_locs.items():
+            if op == Rz_Rzdag:
+                for i, loc in enumerate(locs):
+                    c0 = list(indices[loc])[0]  # "d", "ea", "fgbe" etc.
+                    qubit0 = char2qubits[c0]
+                    pauli_str = ["I"] * n_qubits
+                    pauli_str[qubit0] = "Z"
+                    pauli_str_ = "".join(pauli_str)
+                    updated_coeff = pauli_str2coeff[pauli_str_] * 2
+                    pauli_coefficients[i] = updated_coeff
+            elif op == Rzz_Rzzdag:
+                for i, loc in enumerate(locs):
+                    c1, c0 = list(indices[loc])[:2]  # "d", "ea", "fgbe" etc.
+                    qubit0 = char2qubits[c0]
+                    qubit1 = char2qubits[c1]
+                    pauli_str = ["I"] * n_qubits
+                    pauli_str[qubit0] = pauli_str[qubit1] = "Z"
+                    pauli_str_ = "".join(pauli_str)
+                    updated_coeff = pauli_str2coeff[pauli_str_] * 2
+                    pauli_coefficients[i] = updated_coeff
+            else:
+                for i, _ in enumerate(locs):
+                    if qaoa_mixer == QAOAMixer.XY_MIXER:
+                        updated_coeff = 1.0
+                    else:
+                        updated_coeff = 2.0
+                    pauli_coefficients[i] = updated_coeff
+
+    return pname2locs
+
+
+def _make_pauli_str2coeff(
+    hamiltonian: list[cp.ndarray], coefficients: cp.ndarray
+) -> dict[str, float]:
+    pauli_strings = HamiltonianConverter.to_pauli_strings(hamiltonian)
+    pauli_str2coeff = dict(zip(pauli_strings, coefficients))
+    return pauli_str2coeff
+
+
+def _make_char2qubits(
+    expr: str, operands: list[cp.ndarray], min_hamiltonian_locs: int
+) -> dict[str, int]:
+    """determine which qubit is associated with the character contained in `expr`"""
+
+    ZERO = cp.array([1, 0], dtype=complex)
+    indices = expr.split("->")[0].split(",")
+
+    char2qubits: dict[str, int] = {}
+    qubits = 0
+
+    for i, (ex, op) in enumerate(zip(indices, operands)):
+        if i >= min_hamiltonian_locs:
+            break
+        if op.shape == (2,):
+            if cp.allclose(op, ZERO):
+                char2qubits[ex] = qubits
+                qubits += 1
+        elif op.shape == (2, 2):
+            to_, from_ = list(ex)
+            char2qubits[to_] = char2qubits[from_]
+        elif op.shape == (2, 2, 2, 2):
+            to_1, to_0, from_1, from_0 = list(ex)
+            char2qubits[to_0] = char2qubits[from_0]
+            char2qubits[to_1] = char2qubits[from_1]
+
+    return char2qubits
 
 
 def _find_dummy_hamiltonian(operands: list[cp.ndarray]) -> list[int]:

@@ -89,8 +89,6 @@ def Rx_Rxdag(
         )
         return rx_rxdag[0], rx_rxdag[1]
 
-    print(mat)
-    print(mat_dag)
     mat[0][0] = mat[1][1] = mat_dag[0][0] = mat_dag[1][1] = cos
     mat[0][1] = mat[1][0] = -sin * 1.0j
     mat_dag[0][1] = mat_dag[1][0] = sin * 1.0j

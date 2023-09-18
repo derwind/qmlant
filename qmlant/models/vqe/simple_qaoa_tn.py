@@ -74,13 +74,13 @@ class SimpleQAOA:
                 qc.rzz(theta, qubit1, qubit2)
 
         betas = ParameterVector("β", n_reps)
-        gammas = ParameterVector("γ", n_reps)
-        beta_idx = iter(range(n_qubits * n_reps))
+        beta_idx = iter(range(n_reps))
 
         def bi():
             return next(beta_idx)
 
-        gamma_idx = iter(range(len(ising_dict) * n_reps))
+        gammas = ParameterVector("γ", n_reps)
+        gamma_idx = iter(range(n_reps))
 
         def gi():
             return next(gamma_idx)

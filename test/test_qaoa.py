@@ -6,16 +6,17 @@ warnings.simplefilter("ignore", DeprecationWarning)
 
 import cupy as cp
 import numpy as np
+from scipy.optimize import minimize
 from qiskit import QuantumCircuit, transpile
 from qiskit.circuit import ParameterVector
+from qiskit.circuit.library import QAOAAnsatz
 from qiskit.primitives import Estimator, Sampler
 from qiskit.quantum_info import SparsePauliOp
 from qiskit_aer import AerSimulator
 from qiskit_algorithms.minimum_eigensolvers import QAOA
 from qiskit_algorithms.optimizers import COBYLA
-from qiskit_optimization import QuadraticProgram
 
-from qmlant.models.vqe import circuit_to_einsum_expectation
+from qmlant.models.vqe import HamiltonianConverter, QAOAMixer, circuit_to_einsum_expectation
 from qmlant.neural_networks.estimator_tn import EstimatorTN
 from qmlant.neural_networks.utils import Identity, PauliZ
 
@@ -165,37 +166,7 @@ class TestExpectation(unittest.TestCase):
 
 class TestQAOA(unittest.TestCase):
     @staticmethod
-    def make_placeholder_circuit(
-        ising_dict: dict[tuple[str] | tuple[str, str], float],
-        n_reps: int = 1,
-        insert_barrier: bool = False,
-        dry_run: bool = False,
-    ) -> tuple[QuantumCircuit, Callable[[Sequence[float] | np.ndarray], dict[str, float]]] | int:
-        n_qubits = 4
-        param_names = []
-
-        def rzz(
-            qc: QuantumCircuit, theta: float, qubit1: int, qubit2: int, decompose: bool = False
-        ):
-            if decompose:
-                qc.cx(qubit1, qubit2)
-                qc.rz(theta, qubit2)
-                qc.cx(qubit1, qubit2)
-            else:
-                qc.rzz(theta, qubit1, qubit2)
-
-        beta = ParameterVector("β", n_qubits * n_reps)
-        gamma = ParameterVector("γ", len(ising_dict) * n_reps)
-        beta_idx = iter(range(n_qubits * n_reps))
-
-        def bi():
-            return next(beta_idx)
-
-        gamma_idx = iter(range(len(ising_dict) * n_reps))
-
-        def gi():
-            return next(gamma_idx)
-
+    def make_initial_state_circuit():
         qc = QuantumCircuit(4)
         qc.h(0)
         qc.cx(0, 1)
@@ -203,88 +174,146 @@ class TestQAOA(unittest.TestCase):
         qc.h(2)
         qc.cx(2, 3)
         qc.x(2)
+        return qc
+
+    @staticmethod
+    def make_placeholder_circuit(
+        ising_dict: dict[tuple[str] | tuple[str, str], float],
+        n_reps: int = 1,
+        insert_barrier: bool = ...,
+    ) -> tuple[QuantumCircuit, Callable[[Sequence[float] | np.ndarray], dict[str, float]]] | int:
+        param_names = []
+
+        betas = ParameterVector("β", n_reps)
+        beta_idx = iter(range(n_reps))
+
+        def bi():
+            return next(beta_idx)
+
+        gammas = ParameterVector("γ", n_reps)
+        gamma_idx = iter(range(n_reps))
+
+        def gi():
+            return next(gamma_idx)
+
+        qc = TestQAOA.make_initial_state_circuit()
+
+        if insert_barrier:
+            qc.barrier()
 
         for _ in range(n_reps):
             # H_P
+            gamma = gammas[gi()]
+            param_names.append(gamma.name)
+
             for k in ising_dict:
                 if len(k) == 1:
                     left = k[0]
                     ln = int(left[1:])
-                    rn = None
+                    qc.rz(gamma, ln)
                 elif len(k) == 2:
                     left, right = k  # type: ignore
                     ln = int(left[1:])
                     rn = int(right[1:])
                     assert ln <= rn
+                    qc.rzz(gamma, ln, rn)
                 else:
                     raise ValueError(f"len(k) = {len(k)} must be one or two.")
 
-                if rn is None:
-                    theta = gamma[gi()]
-                    param_names.append(theta.name)
-                    qc.rz(theta, ln)
-                else:
-                    theta = gamma[gi()]
-                    param_names.append(theta.name)
-                    qc.rzz(theta, ln, rn)
+            if insert_barrier:
+                qc.barrier()
 
             # H_M
-            theta = beta[bi()]
-            param_names.append(theta.name)
-            qc.rxx(theta, 0, 1)
-            theta = beta[bi()]
-            param_names.append(theta.name)
-            qc.rxx(theta, 0, 1)
-            param_names.append(theta.name)
-            qc.rxx(theta, 2, 3)
-            theta = beta[bi()]
-            param_names.append(theta.name)
-            qc.ryy(theta, 2, 3)
-            theta = beta[bi()]
+            beta = betas[bi()]
+            param_names.append(beta.name)
 
-        def make_pname2theta(params: Sequence[float] | np.ndarray) -> dict[str, float]:
-            return dict(zip(param_names, params))
+            qc.rxx(beta, 0, 1)
+            qc.ryy(beta, 0, 1)
+            qc.rxx(beta, 2, 3)
+            qc.ryy(beta, 2, 3)
 
-        return qc, make_pname2theta
+            if insert_barrier:
+                qc.barrier()
+
+        return qc
 
     def test_qaoa_xy_mixer(self):
-        linear = {"q0": 4.0, "q1": 4.0, "q2": 4.0, "q3": 4.0}
-        quadratic = {
-            ("q1", "q3"): 2.0,
-            ("q2", "q3"): 2.0,
-            ("q0", "q1"): 4.0,
-            ("q0", "q2"): 4.0,
-            ("q1", "q2"): 8.0,
+        ising_dict = {
+            ("z0",): -4.0,
+            ("z1",): -5.5,
+            ("z0", "z1"): 1.0,
+            ("z2",): -5.5,
+            ("z0", "z2"): 1.0,
+            ("z3",): -3.0,
+            ("z1", "z2"): 2.0,
+            ("z1", "z3"): 0.5,
+            ("z2", "z3"): 0.5,
         }
+        hamiltonian, coefficients = HamiltonianConverter(ising_dict).get_hamiltonian()
+        qubit_op = SparsePauliOp(
+            [ham[::-1] for ham in HamiltonianConverter.to_pauli_strings(hamiltonian)],
+            coefficients,
+        )
+        mixer = SparsePauliOp(["XXII", "YYII", "IIXX", "IIYY"], [1/2, 1/2, 1/2, 1/2])
 
-        qubo = QuadraticProgram()
-        qubo.binary_var("q0")
-        qubo.binary_var("q1")
-        qubo.binary_var("q2")
-        qubo.binary_var("q3")
-
-        qubo.minimize(linear=linear, quadratic=quadratic)
-        qubit_op, offset = qubo.to_ising()
-
-        initial_state_circuit = QuantumCircuit(4)
-        initial_state_circuit.h(0)
-        initial_state_circuit.cx(0, 1)
-        initial_state_circuit.x(0)
-        initial_state_circuit.h(2)
-        initial_state_circuit.cx(2, 3)
-        initial_state_circuit.x(2)
+        n_reps = 2
 
         sampler = Sampler()
         optimizer = COBYLA()
-        step = 1
-        mixer = SparsePauliOp(["XXII", "YYII", "IIXX", "IIYY"], [1 / 2, 1 / 2, 1 / 2, 1 / 2])
         qaoa = QAOA(
             sampler,
             optimizer,
-            reps=step,
-            initial_state=initial_state_circuit,
+            reps=n_reps,
+            initial_state=TestQAOA.make_initial_state_circuit(),
             mixer=mixer,
         )
         result = qaoa.compute_minimum_eigenvalue(qubit_op)
         answer = result.best_measurement["bitstring"]
         self.assertEqual(answer, "1001")
+
+        qc = TestQAOA.make_placeholder_circuit(ising_dict, n_reps=n_reps)
+        expr, operands, pname2locs = circuit_to_einsum_expectation(
+            qc,
+            hamiltonian,
+            coefficients,
+            qaoa_mixer=QAOAMixer.XY_MIXER,
+        )
+
+        estimator = EstimatorTN(pname2locs, expr, operands)
+
+        def comnpute_expectation_tn(params, *args):
+            (estimator,) = args
+            return estimator.forward(params)
+
+        rng = np.random.default_rng(42)
+        init = rng.random(qc.num_parameters) * 2*np.pi
+
+        result = minimize(
+            comnpute_expectation_tn,
+            init,
+            args=(estimator,),
+            method="COBYLA",
+            options={
+                "maxiter": 100
+            },
+        )
+
+        ansatz = QAOAAnsatz(
+            cost_operator=qubit_op,
+            reps=n_reps,
+            initial_state=TestQAOA.make_initial_state_circuit(),
+            mixer_operator=mixer,
+            name='QAOA',
+            flatten=None,
+        )
+        mapping = operands["make_pname2theta"](result.x)
+        parameter2value = {param: mapping[param.name] for param in ansatz.parameters}
+        opt_ansatz = ansatz.bind_parameters(parameter2value)
+        opt_ansatz.measure_all()
+
+        sim = AerSimulator(device="GPU", method="tensor_network")
+        t_qc = transpile(opt_ansatz, backend=sim)
+        shots = 1024
+        counts = sim.run(t_qc, shots=shots).result().get_counts()
+        state, _ = sorted(counts.items(), key=lambda k_v: -k_v[1])[0]
+        self.assertEqual(state, answer)

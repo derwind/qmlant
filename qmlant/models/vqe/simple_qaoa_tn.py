@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
 from typing import Literal, overload
 
-import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.circuit import ParameterVector
 
@@ -96,19 +94,15 @@ class SimpleQAOA:
                 if len(k) == 1:
                     left = k[0]
                     ln = int(left[1:])
-                    rn = None
+                    qc.rz(gamma, ln)
                 elif len(k) == 2:
                     left, right = k  # type: ignore
                     ln = int(left[1:])
                     rn = int(right[1:])
                     assert ln <= rn
+                    rzz(qc, gamma, ln, rn)
                 else:
                     raise ValueError(f"len(k) = {len(k)} must be one or two.")
-
-                if rn is None:
-                    qc.rz(gamma, ln)
-                else:
-                    rzz(qc, gamma, ln, rn)
 
             if insert_barrier:
                 qc.barrier()

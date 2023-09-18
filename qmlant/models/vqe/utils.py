@@ -134,6 +134,7 @@ def circuit_to_einsum_expectation(
     qc_pl: QuantumCircuit,
     hamiltonian: list[cp.ndarray],
     coefficients: np.ndarray | None = None,
+    is_qaoa: bool = False,
     prioritize_performance: bool = True,
     n_partial_hamiltonian: int = 1,
 ) -> (
@@ -146,6 +147,8 @@ def circuit_to_einsum_expectation(
         qc_pl (QuantumCircuit): placeholder `QuantumCircuit` with `ParameterVector`
         hamiltonian (list[cp.ndarray]): Hamiltonian list
         coefficients (np.ndarray | None): coefficients of Hamiltonian
+        is_qaoa (bool): set `True` if QAOA circuit
+        prioritize_performance (bool): use `np.complex64` instead of `np.complex128`
         n_partial_hamiltonian (int): III+IIZ, IZI,ZII, ZIZ+ZZI for
             III + IIZ + IZI + ZII + ZIZ + ZZI if n_partial_hamiltonian = 2
 
@@ -186,12 +189,14 @@ def circuit_to_einsum_expectation(
         coefficients = cp.array(coefficients, dtype=complex)
         operands.insert(coefficients_loc, coefficients)
 
-        # update pname2locs (especially `PauliLocs.coefficients`)
-        pauli_str2coeff = make_pauli_str2coeff(hamiltonian, coefficients)
-        char2qubits = make_char2qubits(expr, operands, min(hamiltonian_locs))
-        new_pname2locs = update_pname2locs(
-            expr, qc_pl.num_qubits, char2qubits, pauli_str2coeff, new_pname2locs
-        )
+        if is_qaoa:
+            # update pname2locs (especially `PauliLocs.coefficients`)
+            # according to coefficients of the problem Hamiltonian
+            pauli_str2coeff = _make_pauli_str2coeff(hamiltonian, coefficients)
+            char2qubits = _make_char2qubits(expr, operands, min(hamiltonian_locs))
+            new_pname2locs = _update_pname2locs(
+                expr, qc_pl.num_qubits, char2qubits, pauli_str2coeff, new_pname2locs
+            )
 
     new_expr = ",".join(es) + "->"
 
@@ -239,7 +244,7 @@ def circuit_to_einsum_expectation(
     return new_expr, new_operands, new_pname2locs
 
 
-def update_pname2locs(
+def _update_pname2locs(
     expr: str,
     n_qubits: int,
     char2qubits: dict[str, int],
@@ -277,7 +282,7 @@ def update_pname2locs(
     return pname2locs
 
 
-def make_pauli_str2coeff(
+def _make_pauli_str2coeff(
     hamiltonian: list[cp.ndarray], coefficients: cp.ndarray
 ) -> dict[str, float]:
     pauli_strings = HamiltonianConverter.to_pauli_strings(hamiltonian)
@@ -285,7 +290,7 @@ def make_pauli_str2coeff(
     return pauli_str2coeff
 
 
-def make_char2qubits(
+def _make_char2qubits(
     expr: str, operands: list[cp.ndarray], min_hamiltonian_locs: int
 ) -> dict[str, int]:
     """determine which qubit is associated with the character contained in `expr`"""

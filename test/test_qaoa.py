@@ -22,19 +22,6 @@ from qmlant.neural_networks.utils import Identity, PauliZ
 
 
 class TestExpectation(unittest.TestCase):
-    @staticmethod
-    def pauli_list2hamiltonian(pauli_list_qiskit: list[str], reverse: bool = True):
-        I = Identity()  # noqa: E741
-        Z = PauliZ()
-
-        if reverse:
-            pauli_list_qiskit = [s[::-1] for s in pauli_list_qiskit]
-
-        hamiltonian_tn = []
-        for pauli_chars in zip(*[[c for c in paulis] for paulis in pauli_list_qiskit]):
-            hamiltonian_tn.append(cp.array([Z if c == "Z" else I for c in pauli_chars]))
-        return hamiltonian_tn
-
     def test_circuit_to_einsum_expectation(self):
         qc = QuantumCircuit(3)
         theta = ParameterVector("θ", 6)
@@ -57,7 +44,7 @@ class TestExpectation(unittest.TestCase):
         result = estimator.run([qc], [hamiltonian], init).result()
         answer_expval = result.values[0]
 
-        hamiltonian_tn = self.pauli_list2hamiltonian(pauli_list)
+        hamiltonian_tn = [s[::-1] for s in pauli_list]
         expr, operands, pname2locs = circuit_to_einsum_expectation(qc, hamiltonian_tn)
         estimator_tn = EstimatorTN(pname2locs, expr, operands)
         expval = estimator_tn.forward(init)
@@ -89,7 +76,7 @@ class TestExpectation(unittest.TestCase):
             result = estimator.run([qc], [hamiltonian], init).result()
             answer_expval = result.values[0]
 
-            hamiltonian_tn = self.pauli_list2hamiltonian(pauli_list)
+            hamiltonian_tn = [s[::-1] for s in pauli_list]
             n_partial_hamiltonian = i + 2
             expr, operands, pname2locs = circuit_to_einsum_expectation(
                 qc, hamiltonian_tn, n_partial_hamiltonian=n_partial_hamiltonian
@@ -121,7 +108,7 @@ class TestExpectation(unittest.TestCase):
         result = estimator.run([qc], [hamiltonian], init).result()
         answer_expval = result.values[0]
 
-        hamiltonian_tn = self.pauli_list2hamiltonian(pauli_list)
+        hamiltonian_tn = [s[::-1] for s in pauli_list]
         expr, operands, pname2locs = circuit_to_einsum_expectation(qc, hamiltonian_tn, coefficients)
         estimator_tn = EstimatorTN(pname2locs, expr, operands)
         expval = estimator_tn.forward(init)
@@ -143,7 +130,7 @@ class TestExpectation(unittest.TestCase):
         pauli_list = ["III", "IIZ", "IZI", "IZZ", "ZII", "ZIZ", "ZZI", "ZZZ"]
         coefficients = [2, -3, 1, -1.5, 5.1, 0.3, -4.3, -0.5]
         hamiltonian = SparsePauliOp(pauli_list, coefficients)
-        hamiltonian_tn = self.pauli_list2hamiltonian(pauli_list)
+        hamiltonian_tn = [s[::-1] for s in pauli_list]
         rng = np.random.default_rng(42)
         inits = np.split(
             rng.random(qc.num_parameters * (len(pauli_list) - 1)) * 2 * np.pi,
@@ -251,7 +238,7 @@ class TestQAOA(unittest.TestCase):
         }
         hamiltonian, coefficients = HamiltonianConverter(ising_dict).get_hamiltonian()
         qubit_op = SparsePauliOp(
-            [ham[::-1] for ham in HamiltonianConverter.to_pauli_strings(hamiltonian)],
+            [ham[::-1] for ham in hamiltonian],
             coefficients,
         )
         mixer = SparsePauliOp(["XXII", "YYII", "IIXX", "IIYY"], [1/2, 1/2, 1/2, 1/2])

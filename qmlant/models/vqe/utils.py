@@ -78,57 +78,50 @@ class HamiltonianConverter:
         self._ising_dict = ising_dict
         self.num_qubits = _calc_num_qubits(ising_dict)
 
-    def get_hamiltonian(self) -> tuple[list[cp.ndarray], np.ndarray]:
-        """get Hamiltonian array and coefficients for `a_{12} Z_1 Z_2 + a_{34} Z_3 Z_4` etc.
+    def get_hamiltonian(self) -> tuple[list[str], np.ndarray]:
+        """get Pauli string list and coefficients for `a_{12} Z_1 Z_2 + a_{34} Z_3 Z_4` etc.
 
         Returns:
-            tuple[list[cp.ndarray]]: Hamiltonian array, e.g., Z_1 Z_2 + Z_3 Z_4
+            list[str]: Pauli string list, e.g., ["ZZII", "IIZZ"]
             np.ndarray: Hamiltonian coefficients, e.g. [a_{12}, a_{34}]
         """
 
-        I = Identity(xp=cp)  # noqa: E741
-        Z = PauliZ(xp=cp)
-
-        hamiltonian: list[cp.ndarray] = []
-        for i in range(self.num_qubits):
-            row = []
-            for k in self._ising_dict.keys():
-                if len(k) == 1:
-                    left = k[0]
-                    ln = int(left[1:])
-                    rn = None
-                elif len(k) == 2:
-                    left, right = k  # type: ignore
-                    ln = int(left[1:])
-                    rn = int(right[1:])
-                else:
-                    raise ValueError(f"len(k) = {len(k)} must be one or two.")
-
-                if ln == i or rn == i:
-                    row.append(Z)
-                else:
-                    row.append(I)
-            hamiltonian.append(cp.array(row))
+        hamiltonian: list[str] = []
+        for k in self._ising_dict.keys():
+            ham = ["I"] * self.num_qubits
+            if len(k) == 1:
+                left = k[0]
+                ln = int(left[1:])
+                ham[ln] = "Z"
+            elif len(k) == 2:
+                left, right = k  # type: ignore
+                ln = int(left[1:])
+                rn = int(right[1:])
+                ham[ln] = ham[rn] = "Z"
+            else:
+                raise ValueError(f"len(k) = {len(k)} must be one or two.")
+            hamiltonian.append("".join(ham))
 
         return hamiltonian, np.array(list(self._ising_dict.values()))
 
     @staticmethod
-    def to_pauli_strings(hamiltonian: list[cp.ndarray]):
-        I = Identity(xp=cp)  # noqa: E741
-        Z = PauliZ(xp=cp)
+    def to_operands(hamiltonian: list[str]) -> list[cp.ndarray]:
+        I = Identity(xp=np)  # noqa: E741
+        Z = PauliZ(xp=np)
 
-        pauli_strings: list[str] = []
-        for ham in zip(*hamiltonian):
-            pauli_str = ""
-            for h in ham:
-                if cp.allclose(h, I):
-                    pauli_str += "I"
-                elif cp.allclose(h, Z):
-                    pauli_str += "Z"
+        n_qubits = len(hamiltonian[0])
+
+        operands: list[list[np.ndarray]] = [[] for _ in range(n_qubits)]
+        for ham in hamiltonian:
+            for i, c in enumerate(list(ham)):
+                if c == "I":
+                    operands[i].append(I)
+                elif c == "Z":
+                    operands[i].append(Z)
                 else:
-                    raise ValueError(f"{h} must be I or Z.")
-            pauli_strings.append(pauli_str)
-        return pauli_strings
+                    raise ValueError(f"{c} must be I or Z.")
+
+        return [cp.array(op) for op in operands]
 
 
 class QAOAMixer(enum.IntEnum):
@@ -139,7 +132,7 @@ class QAOAMixer(enum.IntEnum):
 
 def circuit_to_einsum_expectation(
     qc_pl: QuantumCircuit,
-    hamiltonian: list[cp.ndarray],
+    hamiltonian: list[str],
     coefficients: np.ndarray | None = None,
     qaoa_mixer: QAOAMixer = QAOAMixer.NONE,
     prioritize_performance: bool = True,
@@ -152,7 +145,7 @@ def circuit_to_einsum_expectation(
 
     Args:
         qc_pl (QuantumCircuit): placeholder `QuantumCircuit` with `ParameterVector`
-        hamiltonian (list[cp.ndarray]): Hamiltonian list
+        hamiltonian (list[str]): Hamiltonian Pauli string list
         coefficients (np.ndarray | None): coefficients of Hamiltonian
         is_qaoa (bool): set `True` if QAOA circuit
         prioritize_performance (bool): use `np.complex64` instead of `np.complex128`
@@ -199,17 +192,18 @@ def circuit_to_einsum_expectation(
         if qaoa_mixer != QAOAMixer.NONE:
             # update pname2locs (especially `PauliLocs.coefficients`)
             # according to coefficients of the problem Hamiltonian
-            pauli_str2coeff = _make_pauli_str2coeff(hamiltonian, coefficients)
+            pauli_str2coeff = dict(zip(hamiltonian, coefficients))
             char2qubits = _make_char2qubits(expr, operands, min(hamiltonian_locs))
             new_pname2locs = _update_pname2locs(
                 expr, qc_pl.num_qubits, char2qubits, pauli_str2coeff, qaoa_mixer, new_pname2locs
             )
 
     new_expr = ",".join(es) + "->"
+    ham_operands = HamiltonianConverter.to_operands(hamiltonian)
 
     # update operands with real hamiltonian
     if n_partial_hamiltonian <= 1:
-        for ham, locs in zip(hamiltonian, hamiltonian_locs):  # type: ignore
+        for ham, locs in zip(ham_operands, hamiltonian_locs):  # type: ignore
             operands[locs] = ham  # type: ignore
         operands_ = _convert_dtype(operands, prioritize_performance)  # for better performance
         new_operands: SplittedOperandsDict = {  # type: ignore
@@ -220,19 +214,23 @@ def circuit_to_einsum_expectation(
         operands_ = _convert_dtype(operands, prioritize_performance)  # for better performance
         # split hamiltonian into partial Hamiltonians in order to prevent VRAM overflow
         length = n_partial_hamiltonian
-        if len(hamiltonian[0]) % length != 0:
-            n_deficiency = int(np.ceil(len(hamiltonian[0]) / length)) * length - len(hamiltonian[0])
+        if len(ham_operands[0]) % length != 0:
+            n_deficiency = int(np.ceil(len(ham_operands[0]) / length)) * length - len(
+                ham_operands[0]
+            )
             zero = MatZero()
             padding = cp.array([zero] * n_deficiency, dtype=complex)
-            hamiltonian = [cp.concatenate([ham, padding], axis=0) for ham in hamiltonian]
+            ham_operands = [cp.concatenate([ham, padding], axis=0) for ham in ham_operands]
 
             if coefficients is not None:
                 padding = cp.array([0] * n_deficiency, dtype=complex)
                 coefficients = cp.concatenate([coefficients, padding], axis=0)
 
-        hamiltonian = _convert_dtype(hamiltonian, prioritize_performance)  # for better performance
-        n_partial = len(hamiltonian[0]) // length
-        partial_hamiltonian_list = list(zip(*[cp.split(ham, n_partial) for ham in hamiltonian]))
+        ham_operands = _convert_dtype(
+            ham_operands, prioritize_performance
+        )  # for better performance
+        n_partial = len(ham_operands[0]) // length
+        partial_hamiltonian_list = list(zip(*[cp.split(ham, n_partial) for ham in ham_operands]))
 
         coefficients_list = None
         if coefficients is not None:
@@ -291,14 +289,6 @@ def _update_pname2locs(
                     pauli_coefficients[i] = updated_coeff
 
     return pname2locs
-
-
-def _make_pauli_str2coeff(
-    hamiltonian: list[cp.ndarray], coefficients: cp.ndarray
-) -> dict[str, float]:
-    pauli_strings = HamiltonianConverter.to_pauli_strings(hamiltonian)
-    pauli_str2coeff = dict(zip(pauli_strings, coefficients))
-    return pauli_str2coeff
 
 
 def _make_char2qubits(

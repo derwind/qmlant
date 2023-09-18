@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 from collections.abc import Sequence
 
 import cupy as cp
@@ -130,11 +131,17 @@ class HamiltonianConverter:
         return pauli_strings
 
 
+class QAOAMixer(enum.IntEnum):
+    NONE = 0
+    X_MIXER = enum.auto()
+    XY_MIXER = enum.auto()
+
+
 def circuit_to_einsum_expectation(
     qc_pl: QuantumCircuit,
     hamiltonian: list[cp.ndarray],
     coefficients: np.ndarray | None = None,
-    is_qaoa: bool = False,
+    qaoa_mixer: QAOAMixer = QAOAMixer.NONE,
     prioritize_performance: bool = True,
     n_partial_hamiltonian: int = 1,
 ) -> (
@@ -189,13 +196,13 @@ def circuit_to_einsum_expectation(
         coefficients = cp.array(coefficients, dtype=complex)
         operands.insert(coefficients_loc, coefficients)
 
-        if is_qaoa:
+        if qaoa_mixer != QAOAMixer.NONE:
             # update pname2locs (especially `PauliLocs.coefficients`)
             # according to coefficients of the problem Hamiltonian
             pauli_str2coeff = _make_pauli_str2coeff(hamiltonian, coefficients)
             char2qubits = _make_char2qubits(expr, operands, min(hamiltonian_locs))
             new_pname2locs = _update_pname2locs(
-                expr, qc_pl.num_qubits, char2qubits, pauli_str2coeff, new_pname2locs
+                expr, qc_pl.num_qubits, char2qubits, pauli_str2coeff, qaoa_mixer, new_pname2locs
             )
 
     new_expr = ",".join(es) + "->"
@@ -249,6 +256,7 @@ def _update_pname2locs(
     n_qubits: int,
     char2qubits: dict[str, int],
     pauli_str2coeff: dict[str, float],
+    qaoa_mixer: QAOAMixer,
     pname2locs: ParameterName2Locs,
 ) -> ParameterName2Locs:
     indices = expr.split("->")[0].split(",")
@@ -276,7 +284,10 @@ def _update_pname2locs(
                     pauli_coefficients[i] = updated_coeff
             else:
                 for i, _ in enumerate(locs):
-                    updated_coeff = 2.0
+                    if qaoa_mixer == QAOAMixer.XY_MIXER:
+                        updated_coeff = 1.0
+                    else:
+                        updated_coeff = 2.0
                     pauli_coefficients[i] = updated_coeff
 
     return pname2locs

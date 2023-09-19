@@ -56,6 +56,7 @@ class IsingConverter:
                 ising_dict[new_k] += -v / 4
                 offset += v / 4
 
+        ising_dict = {k: v for k, v in ising_dict.items() if not np.isclose(v, 0)}
         ising_dict = dict(sorted(ising_dict.items(), key=lambda k_v: self._calc_key(k_v[0])))
         return ising_dict, offset
 

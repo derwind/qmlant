@@ -16,9 +16,8 @@ from qiskit_aer import AerSimulator
 from qiskit_algorithms.minimum_eigensolvers import QAOA
 from qiskit_algorithms.optimizers import COBYLA
 
-from qmlant.models.vqe import HamiltonianConverter, QAOAMixer, circuit_to_einsum_expectation
+from qmlant.models.vqe import SimpleQAOA, HamiltonianConverter, QAOAMixer, circuit_to_einsum_expectation
 from qmlant.neural_networks.estimator_tn import EstimatorTN
-from qmlant.neural_networks.utils import Identity, PauliZ
 
 
 class TestExpectation(unittest.TestCase):
@@ -153,7 +152,13 @@ class TestExpectation(unittest.TestCase):
 
 class TestQAOA(unittest.TestCase):
     @staticmethod
-    def make_initial_state_circuit():
+    def make_initial_state_circuit_x():
+        qc = QuantumCircuit(6)
+        qc.h(qc.qregs[0][:])
+        return qc
+
+    @staticmethod
+    def make_initial_state_circuit_xy():
         qc = QuantumCircuit(4)
         qc.h(0)
         qc.cx(0, 1)
@@ -164,7 +169,7 @@ class TestQAOA(unittest.TestCase):
         return qc
 
     @staticmethod
-    def make_placeholder_circuit(
+    def make_placeholder_circuit_xy(
         ising_dict: dict[tuple[str] | tuple[str, str], float],
         n_reps: int = 1,
         insert_barrier: bool = ...,
@@ -183,7 +188,7 @@ class TestQAOA(unittest.TestCase):
         def gi():
             return next(gamma_idx)
 
-        qc = TestQAOA.make_initial_state_circuit()
+        qc = TestQAOA.make_initial_state_circuit_xy()
 
         if insert_barrier:
             qc.barrier()
@@ -224,6 +229,78 @@ class TestQAOA(unittest.TestCase):
 
         return qc
 
+    def test_qaoa_x_mixer(self):
+        ising_dict = {
+            ("z0", "z1"): 750.0,
+            ("z0", "z2"): 990.0,
+            ("z0", "z3"): 1230.0,
+            ("z0", "z4"): 1920.0,
+            ("z0", "z5"): 2460.0,
+            ("z1", "z2"): 1650.0,
+            ("z1", "z3"): 2050.0,
+            ("z1", "z4"): 3200.0,
+            ("z1", "z5"): 4100.0,
+            ("z2", "z3"): 2706.0,
+            ("z2", "z4"): 4224.0,
+            ("z2", "z5"): 5412.0,
+            ("z3", "z4"): 5248.0,
+            ("z3", "z5"): 6724.0,
+            ("z4", "z5"): 10496.0,
+        }
+        hamiltonian, coefficients = HamiltonianConverter(ising_dict).get_hamiltonian()
+        # normalize too large coefficients
+        coefficients /= np.max(abs(coefficients))
+        qubit_op = SparsePauliOp(
+            [ham[::-1] for ham in hamiltonian],
+            coefficients,
+        )
+
+        n_reps = 3
+
+        qc = SimpleQAOA.make_placeholder_circuit(ising_dict, n_reps=3)
+        expr, operands, pname2locs = circuit_to_einsum_expectation(
+            qc, hamiltonian, coefficients, qaoa_mixer=QAOAMixer.X_MIXER
+        )
+
+        estimator = EstimatorTN(pname2locs, expr, operands)
+
+        def comnpute_expectation_tn(params, *args):
+            (estimator,) = args
+            return estimator.forward(params)
+
+        rng = np.random.default_rng(42)
+        init = rng.random(qc.num_parameters) * 2*np.pi
+
+        result = minimize(
+            comnpute_expectation_tn,
+            init,
+            args=(estimator,),
+            method="COBYLA",
+            options={
+                "maxiter": 50
+            },
+        )
+
+        ansatz = QAOAAnsatz(
+            cost_operator=qubit_op,
+            reps=n_reps,
+            initial_state=TestQAOA.make_initial_state_circuit_x(),
+            name='QAOA',
+            flatten=True,
+        )
+        mapping = operands["make_pname2theta"](result.x)
+        parameter2value = {param: mapping[param.name] for param in ansatz.parameters}
+        opt_ansatz = ansatz.bind_parameters(parameter2value)
+        opt_ansatz.measure_all()
+
+        sim = AerSimulator(device="GPU", method="tensor_network")
+        t_qc = transpile(opt_ansatz, backend=sim)
+        shots = 1024
+        counts = sim.run(t_qc, shots=shots).result().get_counts()
+        states = list(zip(*sorted(counts.items(), key=lambda k_v: -k_v[1])))[0]
+        states = list(states)[:5]
+        self.assertTrue("101001" in states or "010110" in states)
+
     def test_qaoa_xy_mixer(self):
         ising_dict = {
             ("z0",): -4.0,
@@ -251,14 +328,14 @@ class TestQAOA(unittest.TestCase):
             sampler,
             optimizer,
             reps=n_reps,
-            initial_state=TestQAOA.make_initial_state_circuit(),
+            initial_state=TestQAOA.make_initial_state_circuit_xy(),
             mixer=mixer,
         )
         result = qaoa.compute_minimum_eigenvalue(qubit_op)
         answer = result.best_measurement["bitstring"]
         self.assertEqual(answer, "1001")
 
-        qc = TestQAOA.make_placeholder_circuit(ising_dict, n_reps=n_reps)
+        qc = TestQAOA.make_placeholder_circuit_xy(ising_dict, n_reps=n_reps)
         expr, operands, pname2locs = circuit_to_einsum_expectation(
             qc,
             hamiltonian,
@@ -288,10 +365,10 @@ class TestQAOA(unittest.TestCase):
         ansatz = QAOAAnsatz(
             cost_operator=qubit_op,
             reps=n_reps,
-            initial_state=TestQAOA.make_initial_state_circuit(),
+            initial_state=TestQAOA.make_initial_state_circuit_xy(),
             mixer_operator=mixer,
             name='QAOA',
-            flatten=None,
+            flatten=True,
         )
         mapping = operands["make_pname2theta"](result.x)
         parameter2value = {param: mapping[param.name] for param in ansatz.parameters}

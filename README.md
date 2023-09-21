@@ -2,6 +2,11 @@
 
 QML (Quantum Machine Learning) SDK based on [cuTensorNet](https://docs.nvidia.com/cuda/cuquantum/latest/cutensornet/index.html).
 
+- Simple Quantum Neural Networks
+- Simple Quantum Convolutional Neural Networks
+- Simple QAOA (X-Mixer, XY-Mixer)
+- Simple VQE
+
 ## Installation
 
 ```bash

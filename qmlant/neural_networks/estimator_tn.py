@@ -44,13 +44,16 @@ class EstimatorTN:
         pname2locs: ParameterName2Locs,
         expr: str | None = None,
         operands: list[cp.ndarray] | SplittedOperandsDict | None = None,
+        make_pname2theta: Callable[
+            [Sequence[float] | np.ndarray], dict[str, float]
+        ] = default_make_pname2theta,
         batch_filter: Callable[[np.ndarray], np.ndarray] = default_batch_filter,
         memory_limit: int | str = r"80%",
     ):
         self.pname2locs = pname2locs
         self.expr = expr
         self.operands = operands
-        self.make_pname2theta = default_make_pname2theta
+        self.make_pname2theta = make_pname2theta
         if isinstance(self.operands, dict):  # OperandsDict, SplittedOperandsDict
             self.make_pname2theta = self.operands["make_pname2theta"]  # type: ignore
         self.batch_filter = batch_filter

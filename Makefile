@@ -15,4 +15,4 @@ black:
 	black qmlant setup.py
 
 pytest:
-	pytest tests
+	pytest test
